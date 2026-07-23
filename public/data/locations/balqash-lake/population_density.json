@@ -1,0 +1,11 @@
+{
+  "source": "GHS-POP R2023A (JRC), epoch 2020, WGS84 3 arc-sec (~100 m)",
+  "units": "population count per source pixel",
+  "width": 600,
+  "height": 244,
+  "minLon": 72.8,
+  "minLat": 44.8,
+  "maxLon": 79.2,
+  "maxLat": 47.4,
+  "valuesFile": "population_density.bin"
+}

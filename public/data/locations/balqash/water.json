@@ -1,0 +1,89 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-06-12T12:14:17Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "way",
+  "id": 288078374,
+  "bounds": {
+    "minlat": 46.8628705,
+    "minlon": 74.9512236,
+    "maxlat": 46.8653197,
+    "maxlon": 74.9732110
+  },
+  "nodes": [
+    1829412873,
+    1829412875,
+    1829412897,
+    1829412913,
+    1829412916,
+    1829412924
+  ],
+  "geometry": [
+    { "lat": 46.8628705, "lon": 74.9512236 },
+    { "lat": 46.8630912, "lon": 74.9556886 },
+    { "lat": 46.8636377, "lon": 74.9602552 },
+    { "lat": 46.8651986, "lon": 74.9698787 },
+    { "lat": 46.8652644, "lon": 74.9708836 },
+    { "lat": 46.8653197, "lon": 74.9732110 }
+  ],
+  "tags": {
+    "waterway": "ditch"
+  }
+},
+{
+  "type": "way",
+  "id": 814826521,
+  "bounds": {
+    "minlat": 46.8648676,
+    "minlon": 74.9734926,
+    "maxlat": 46.8652940,
+    "maxlon": 74.9770841
+  },
+  "nodes": [
+    1829412919,
+    7611002023,
+    7611002022,
+    7611002021
+  ],
+  "geometry": [
+    { "lat": 46.8652940, "lon": 74.9734926 },
+    { "lat": 46.8650180, "lon": 74.9741337 },
+    { "lat": 46.8649887, "lon": 74.9742973 },
+    { "lat": 46.8648676, "lon": 74.9770841 }
+  ],
+  "tags": {
+    "waterway": "ditch"
+  }
+},
+{
+  "type": "way",
+  "id": 814826522,
+  "bounds": {
+    "minlat": 46.8652940,
+    "minlon": 74.9732110,
+    "maxlat": 46.8653197,
+    "maxlon": 74.9734926
+  },
+  "nodes": [
+    1829412924,
+    1829412919
+  ],
+  "geometry": [
+    { "lat": 46.8653197, "lon": 74.9732110 },
+    { "lat": 46.8652940, "lon": 74.9734926 }
+  ],
+  "tags": {
+    "layer": "-1",
+    "tunnel": "culvert",
+    "waterway": "ditch"
+  }
+}
+
+  ]
+}

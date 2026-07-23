@@ -1,0 +1,328 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=IBM+Plex+Mono:wght@100;200;300;400;500&family=Inter:wght@100;200;300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 220 20% 8%;
+    --foreground: 210 20% 90%;
+
+    --card: 220 18% 12%;
+    --card-foreground: 210 20% 90%;
+
+    --popover: 220 18% 12%;
+    --popover-foreground: 210 20% 90%;
+
+    --primary: 190 70% 50%;
+    --primary-foreground: 220 20% 8%;
+
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 210 20% 80%;
+
+    --muted: 220 15% 15%;
+    --muted-foreground: 215 15% 55%;
+
+    --accent: 160 50% 45%;
+    --accent-foreground: 220 20% 8%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 190 70% 50%;
+
+    --radius: 0.5rem;
+
+    --terrain-low: 210 60% 40%;
+    --terrain-mid: 120 40% 35%;
+    --terrain-high: 30 50% 45%;
+    --terrain-peak: 0 0% 95%;
+
+    --sidebar-background: 220 18% 10%;
+    --sidebar-foreground: 210 20% 80%;
+    --sidebar-primary: 190 70% 50%;
+    --sidebar-primary-foreground: 220 20% 8%;
+    --sidebar-accent: 220 15% 15%;
+    --sidebar-accent-foreground: 210 20% 80%;
+    --sidebar-border: 220 15% 20%;
+    --sidebar-ring: 190 70% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-card/80 backdrop-blur-md border border-border rounded-lg;
+  }
+
+  .terrain-glow {
+    box-shadow: 0 0 40px -10px hsl(var(--primary) / 0.3);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   MIRAGE MODE — off-white paper, hairline strokes, monospace.
+   Activated by adding `.mirage` to <html>. We override the design
+   tokens so every component that uses semantic colors recolors
+   automatically; on top of that we restyle .glass-panel and the
+   typography globally.
+   ────────────────────────────────────────────────────────────────── */
+html.mirage {
+  /* Whiter paper — much closer to white, retains warmth */
+  --background: 40 30% 98%;           /* near-white warm */
+  --foreground: 0 0% 10%;             /* #1A1A1A */
+
+  --card: 40 30% 99%;
+  --card-foreground: 0 0% 10%;
+
+  --popover: 40 30% 99%;
+  --popover-foreground: 0 0% 10%;
+
+  --primary: 0 0% 10%;
+  --primary-foreground: 40 30% 99%;
+
+  --secondary: 40 14% 93%;
+  --secondary-foreground: 0 0% 20%;
+
+  --muted: 40 14% 95%;
+  --muted-foreground: 0 0% 42%;
+
+  --accent: 199 30% 58%;
+  --accent-foreground: 0 0% 10%;
+
+  --destructive: 0 42% 55%;
+  --destructive-foreground: 40 30% 99%;
+
+  --border: 0 0% 10%;
+  --input: 0 0% 10%;
+  --ring: 0 0% 10%;
+
+  --terrain-low: 199 30% 58%;
+  --terrain-mid: 40 26% 80%;
+  --terrain-high: 117 11% 60%;
+  --terrain-peak: 42 20% 96%;
+
+  --sidebar-background: 40 30% 99%;
+  --sidebar-foreground: 0 0% 10%;
+  --sidebar-primary: 0 0% 10%;
+  --sidebar-primary-foreground: 40 30% 99%;
+  --sidebar-accent: 40 14% 95%;
+  --sidebar-accent-foreground: 0 0% 10%;
+  --sidebar-border: 0 0% 10%;
+  --sidebar-ring: 0 0% 10%;
+
+  /* Designer-overridable defaults */
+  --m-border-width: 1px;
+  --m-grid-opacity: 0.012;
+  --m-grid-spacing: 48px;
+  --m-font-weight: 200;
+  --m-fs-base: 11px;
+  --m-fs-label: 9px;
+  --m-radius: 0px;
+  --m-svg-stroke: 0.5;
+
+  /* Type scale derived from base */
+  --mirage-fs-xs: calc(var(--m-fs-base) - 2px);
+  --mirage-fs-sm: calc(var(--m-fs-base) - 1px);
+  --mirage-fs-base: var(--m-fs-base);
+  --mirage-fs-md: calc(var(--m-fs-base) + 1px);
+  --mirage-fs-lg: calc(var(--m-fs-base) + 3px);
+}
+
+/* One font, one weight family — Inter ultralight (designer-tunable) */
+html.mirage,
+html.mirage body,
+html.mirage button,
+html.mirage input,
+html.mirage select,
+html.mirage textarea,
+html.mirage [role="button"],
+html.mirage span,
+html.mirage div,
+html.mirage p,
+html.mirage label,
+html.mirage a {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: var(--m-font-weight);
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+html.mirage body { font-size: var(--m-fs-base); }
+
+html.mirage .font-mono,
+html.mirage code,
+html.mirage pre {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 200;
+}
+
+/* Headings — only size & weight create hierarchy */
+html.mirage h1, html.mirage h2, html.mirage h3,
+html.mirage h4, html.mirage h5, html.mirage h6 {
+  font-weight: 300;
+  letter-spacing: 0;
+}
+html.mirage h1 { font-size: 16px; }
+html.mirage h2 { font-size: 13px; }
+html.mirage h3 { font-size: 12px; }
+
+/* Normalize text sizes — kill bulky tailwind sizes */
+html.mirage .text-xs   { font-size: var(--mirage-fs-xs); }
+html.mirage .text-sm   { font-size: var(--mirage-fs-sm); }
+html.mirage .text-base { font-size: var(--mirage-fs-base); }
+html.mirage .text-lg   { font-size: var(--mirage-fs-md); }
+html.mirage .text-xl   { font-size: var(--mirage-fs-lg); }
+html.mirage .text-2xl  { font-size: 16px; }
+html.mirage .text-3xl  { font-size: 18px; }
+
+/* Strip bold weight everywhere — quiet, even hierarchy */
+html.mirage .font-bold,
+html.mirage .font-semibold,
+html.mirage .font-medium { font-weight: 300; }
+
+/* Hairline borders everywhere — even thinner */
+html.mirage * { border-color: hsl(0 0% 10% / 0.1); }
+
+/* Glass panels: tracing paper, hairline, tight padding */
+html.mirage .glass-panel {
+  background: hsl(40 30% 99% / 0.86);
+  backdrop-filter: blur(3px);
+  border: 1px solid hsl(0 0% 10% / 0.12);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Kill ALL rounded corners — fully square */
+html.mirage .rounded,
+html.mirage .rounded-sm,
+html.mirage .rounded-md,
+html.mirage .rounded-lg,
+html.mirage .rounded-xl,
+html.mirage .rounded-2xl,
+html.mirage .rounded-3xl,
+html.mirage .rounded-full,
+html.mirage [class*="rounded"] { border-radius: 0 !important; }
+
+/* Tighten paddings — less bulky everywhere */
+html.mirage .p-6 { padding: 12px; }
+html.mirage .p-5 { padding: 10px; }
+html.mirage .p-4 { padding: 10px; }
+html.mirage .p-3 { padding: 8px; }
+html.mirage .p-2 { padding: 6px; }
+html.mirage .py-3 { padding-top: 6px; padding-bottom: 6px; }
+html.mirage .py-2 { padding-top: 5px; padding-bottom: 5px; }
+html.mirage .px-4 { padding-left: 10px; padding-right: 10px; }
+html.mirage .px-3 { padding-left: 8px; padding-right: 8px; }
+html.mirage .gap-4 { gap: 8px; }
+html.mirage .gap-3 { gap: 6px; }
+html.mirage .gap-2 { gap: 5px; }
+html.mirage .space-y-4 > * + * { margin-top: 8px; }
+html.mirage .space-y-3 > * + * { margin-top: 6px; }
+html.mirage .space-y-2 > * + * { margin-top: 4px; }
+
+/* Buttons: hairline, no fills, compact */
+html.mirage button {
+  font-weight: 300;
+  font-size: var(--mirage-fs-sm);
+}
+html.mirage .h-10 { height: 28px; }
+html.mirage .h-9  { height: 26px; }
+html.mirage .h-8  { height: 24px; }
+
+/* Slider — thinner track */
+html.mirage [role="slider"] {
+  width: 10px !important;
+  height: 10px !important;
+  border: 1px solid hsl(0 0% 10%) !important;
+  background: hsl(40 30% 99%) !important;
+}
+html.mirage [data-orientation="horizontal"] {
+  height: 1px !important;
+}
+
+/* Quiet primary text accents */
+html.mirage .text-primary { color: hsl(0 0% 10%); }
+
+/* Ruled-paper background — designer-tunable */
+html.mirage body {
+  background-color: hsl(var(--background));
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--m-grid-spacing) - 1px),
+      hsl(0 0% 10% / var(--m-grid-opacity)) calc(var(--m-grid-spacing) - 1px),
+      hsl(0 0% 10% / var(--m-grid-opacity)) var(--m-grid-spacing)
+    );
+}
+
+/* Floating 3D labels */
+html.mirage .terrain-glow { box-shadow: none; }
+html.mirage canvas + div [style*="position"] {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: var(--m-font-weight) !important;
+}
+html.mirage .floating-label,
+html.mirage .map-label,
+html.mirage .metric-label,
+html.mirage [data-floating="label"],
+html.mirage [data-floating="number"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: hsl(var(--foreground)) !important;
+  font-family: 'Inter', sans-serif !important;
+  font-weight: var(--m-font-weight) !important;
+  font-size: var(--m-fs-label) !important;
+  letter-spacing: 0.04em !important;
+  text-shadow: 0 0 2px hsl(var(--background) / 0.95);
+  padding: 0 !important;
+}
+
+/* SVG strokes — designer-tunable */
+html.mirage svg * { stroke-width: var(--m-svg-stroke) !important; }
+html.mirage svg [data-emphasis="true"] { stroke-width: calc(var(--m-svg-stroke) * 2) !important; }
+
+/* ---------- Mobile / touch helpers ---------- */
+/* Respect notch / home-indicator safe areas on phones. */
+@supports (padding: max(0px)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    box-sizing: border-box;
+  }
+}
+
+/* Stop iOS rubber-band scrolling so canvas gestures feel native. */
+html, body, #root {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* On touch-only devices, disable text selection on HUD chrome so long-press
+   doesn't trigger the system selection menu over our controls. */
+@media (hover: none) and (pointer: coarse) {
+  [data-hud], button { -webkit-user-select: none; user-select: none; }
+  /* Prevent iOS Safari from zooming on double-tap. */
+  * { touch-action: manipulation; }
+  canvas { touch-action: none; }
+}

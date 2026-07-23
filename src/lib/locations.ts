@@ -1,0 +1,136 @@
+import type { GeoBounds } from './geotiff-loader';
+
+/**
+ * Location registry. To add a new location, append an entry here and it will
+ * automatically be available at `/{slug}` (see `src/pages/LocationPage.tsx`
+ * and the route in `src/App.tsx`).
+ */
+export interface LocationDef {
+  slug: string;
+  label: string;
+  center: { lat: number; lon: number };
+  /** Bounding box for terrain, satellite, and vector layers. */
+  bounds: GeoBounds;
+  /** Larger bounding box for water features (rendered beyond terrain edges). */
+  waterBounds?: GeoBounds;
+  /** Optional default vertical exaggeration (1–30). */
+  exaggeration?: number;
+}
+
+/**
+ * Build a square-ish bounding box of roughly `sizeKm` on a side around a
+ * lon/lat center. Compensates for latitude on the longitude axis.
+ */
+export function bboxAround(lat: number, lon: number, sizeKm: number): GeoBounds {
+  const latDelta = sizeKm / 111; // ~111 km per degree of latitude
+  const lonDelta = sizeKm / (111 * Math.cos((lat * Math.PI) / 180));
+  return {
+    minLat: lat - latDelta / 2,
+    maxLat: lat + latDelta / 2,
+    minLon: lon - lonDelta / 2,
+    maxLon: lon + lonDelta / 2,
+  };
+}
+
+export const LOCATIONS: LocationDef[] = [
+  {
+    slug: 'suaq',
+    label: 'Suaq',
+    center: { lat: (43.33403 + 43.36792) / 2, lon: (79.03803 + 79.09781) / 2 },
+    bounds: {
+      minLat: 43.33403,
+      maxLat: 43.36792,
+      minLon: 79.03803,
+      maxLon: 79.09781,
+    },
+    waterBounds: {
+      minLat: 43.07, maxLat: 43.63,
+      minLon: 78.67, maxLon: 79.47,
+    },
+    exaggeration: 30,
+  },
+  {
+    slug: 'almaty',
+    label: 'Almaty',
+    center: { lat: (43.220 + 43.256) / 2, lon: (76.925 + 76.975) / 2 },
+    bounds: {
+      minLat: 43.220,
+      maxLat: 43.256,
+      minLon: 76.925,
+      maxLon: 76.975,
+    },
+    waterBounds: {
+      minLat: 42.96, maxLat: 43.52,
+      minLon: 76.62, maxLon: 77.28,
+    },
+    exaggeration: 30,
+  },
+  {
+    // Lake Balqash — shoreline at Balkhash city on the north shore.
+    slug: 'balqash',
+    label: 'Balqash',
+    center: { lat: 46.845, lon: 74.994 },
+    bounds: {
+      minLat: 46.820,
+      maxLat: 46.870,
+      minLon: 74.960,
+      maxLon: 75.030,
+    },
+    waterBounds: {
+      minLat: 46.55, maxLat: 47.10,
+      minLon: 74.55, maxLon: 75.40,
+    },
+    exaggeration: 30,
+  },
+  {
+    // Entire Lake Balqash and surroundings (~600 km east-west).
+    slug: 'balqash-lake',
+    label: 'Lake Balqash',
+    center: { lat: 46.20, lon: 75.60 },
+    bounds: {
+      minLat: 44.80, maxLat: 47.40,
+      minLon: 72.80, maxLon: 79.20,
+    },
+    waterBounds: {
+      minLat: 44.60, maxLat: 47.60,
+      minLon: 72.40, maxLon: 79.60,
+    },
+    exaggeration: 30,
+  },
+  {
+    // Lake Alakol plus the Dzungarian (Jungar) Alatau range to its south
+    // (NE Kazakhstan, near Chinese border).
+    slug: 'alakol',
+    label: 'Lake Alakol',
+    center: { lat: 45.525, lon: 81.75 },
+    bounds: {
+      minLat: 44.50, maxLat: 46.55,
+      minLon: 81.05, maxLon: 82.55,
+    },
+    waterBounds: {
+      minLat: 44.30, maxLat: 46.75,
+      minLon: 80.80, maxLon: 82.80,
+    },
+    exaggeration: 30,
+  },
+  {
+    // Lake Seliger — glacial lake in Tver Oblast, Russia.
+    slug: 'seliger',
+    label: 'Lake Seliger',
+    center: { lat: 57.22, lon: 33.05 },
+    bounds: {
+      minLat: 56.90, maxLat: 57.55,
+      minLon: 32.60, maxLon: 33.55,
+    },
+    waterBounds: {
+      minLat: 56.75, maxLat: 57.70,
+      minLon: 32.35, maxLon: 33.80,
+    },
+    exaggeration: 30,
+  },
+];
+
+
+export function findLocation(slug: string): LocationDef | undefined {
+  return LOCATIONS.find((l) => l.slug === slug);
+}
