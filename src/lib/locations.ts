@@ -15,6 +15,15 @@ export interface LocationDef {
   waterBounds?: GeoBounds;
   /** Optional default vertical exaggeration (1–30). */
   exaggeration?: number;
+  /** Optional per-location basemap image adjustment defaults (see LocationPage's Image panel). */
+  imageDefaults?: {
+    brightness?: number;
+    contrast?: number;
+    saturation?: number;
+    gamma?: number;
+    tint?: string;
+    tintStrength?: number;
+  };
 }
 
 /**
@@ -125,6 +134,45 @@ export const LOCATIONS: LocationDef[] = [
     waterBounds: {
       minLat: 56.75, maxLat: 57.70,
       minLon: 32.35, maxLon: 33.80,
+    },
+    exaggeration: 16,
+    imageDefaults: {
+      brightness: 5.1,
+      contrast: 0.75,
+      saturation: 0.65,
+      gamma: 0.85,
+      tintStrength: 0.14,
+    },
+  },
+  {
+    // Aral Sea and its dried-up basin (Uzbekistan/Kazakhstan).
+    slug: 'aral-sea',
+    label: 'Aral Sea',
+    center: { lat: 45.25, lon: 60.00 },
+    bounds: {
+      minLat: 43.00, maxLat: 47.50,
+      minLon: 57.50, maxLon: 62.50,
+    },
+    waterBounds: {
+      minLat: 42.80, maxLat: 47.70,
+      minLon: 57.20, maxLon: 62.80,
+    },
+    exaggeration: 30,
+  },
+  {
+    // Northern Caspian Sea near the Kazakh coast (Mangystau / Atyrau region).
+    // The full Caspian spans ~1200 km N-S and is impractical for a single
+    // bounded terrain tile like the other locations here.
+    slug: 'caspian-sea',
+    label: 'Caspian Sea (North)',
+    center: { lat: 45.50, lon: 52.00 },
+    bounds: {
+      minLat: 44.00, maxLat: 47.00,
+      minLon: 50.00, maxLon: 54.00,
+    },
+    waterBounds: {
+      minLat: 43.80, maxLat: 47.20,
+      minLon: 49.70, maxLon: 54.30,
     },
     exaggeration: 30,
   },

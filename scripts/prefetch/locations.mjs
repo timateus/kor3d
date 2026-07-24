@@ -36,4 +36,14 @@ export const LOCATIONS = [
     bounds: { minLat: 56.90, maxLat: 57.55, minLon: 32.60, maxLon: 33.55 },
     waterBounds: { minLat: 56.75, maxLat: 57.70, minLon: 32.35, maxLon: 33.80 },
   },
+  {
+    slug: 'aral-sea',
+    bounds: { minLat: 43.00, maxLat: 47.50, minLon: 57.50, maxLon: 62.50 },
+    waterBounds: { minLat: 42.80, maxLat: 47.70, minLon: 57.20, maxLon: 62.80 },
+  },
+  {
+    slug: 'caspian-sea',
+    bounds: { minLat: 44.00, maxLat: 47.00, minLon: 50.00, maxLon: 54.00 },
+    waterBounds: { minLat: 43.80, maxLat: 47.20, minLon: 49.70, maxLon: 54.30 },
+  },
 ];

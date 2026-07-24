@@ -12,6 +12,7 @@ import TerrainStyleOverlay, { type TerrainStyle } from '@/components/TerrainStyl
 import OsmWaterwaysLayer from '@/components/location/OsmWaterwaysLayer';
 import OsmPopulationLayer from '@/components/location/OsmPopulationLayer';
 import OsmPlacesLayer from '@/components/location/OsmPlacesLayer';
+import OsmLinesLayer from '@/components/location/OsmLinesLayer';
 import OsmBuildingsLayer from '@/components/location/OsmBuildingsLayer';
 import InaturalistLayer, { type InatObservation } from '@/components/location/InaturalistLayer';
 import type { PopulationGrid } from '@/lib/population-density';
@@ -162,7 +163,10 @@ export default function LocationPage() {
   const [showPopulation, setShowPopulation] = useState(true);
   const [showPlaces, setShowPlaces] = useState(true);
   const [showOsmBuildings, setShowOsmBuildings] = useState(false);
+  const [showRoads, setShowRoads] = useState(false);
+  const [showBorders, setShowBorders] = useState(false);
   const [showInat, setShowInat] = useState(true);
+  const [texLoading, setTexLoading] = useState(true);
 
   // View mode & per-mode parameters
   const [terrainStyle, setTerrainStyle] = useState<TerrainStyle>('none');
@@ -171,12 +175,13 @@ export default function LocationPage() {
   const [meshInterval, setMeshInterval] = useState(60);
 
   // Basemap image adjustments
-  const [brightness, setBrightness] = useState(1.75);
-  const [contrast, setContrast] = useState(0.8);
-  const [saturation, setSaturation] = useState(0.6);
-  const [gamma, setGamma] = useState(0.9);
-  const [tint, setTint] = useState('#ffffff');
-  const [tintStrength, setTintStrength] = useState(0);
+  const imgDefaults = location?.imageDefaults;
+  const [brightness, setBrightness] = useState(imgDefaults?.brightness ?? 1.75);
+  const [contrast, setContrast] = useState(imgDefaults?.contrast ?? 0.8);
+  const [saturation, setSaturation] = useState(imgDefaults?.saturation ?? 0.6);
+  const [gamma, setGamma] = useState(imgDefaults?.gamma ?? 0.9);
+  const [tint, setTint] = useState(imgDefaults?.tint ?? '#ffffff');
+  const [tintStrength, setTintStrength] = useState(imgDefaults?.tintStrength ?? 0);
 
   // Population heatmap
   const [popOpacity, setPopOpacity] = useState(0.75);
@@ -297,7 +302,7 @@ export default function LocationPage() {
   const btnBase =
     'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border border-border/60 bg-background/80 backdrop-blur hover:bg-accent transition-colors';
 
-  const dataBase = `/data/locations/${location.slug}`;
+  const dataBase = `${import.meta.env.BASE_URL}data/locations/${location.slug}`;
 
   return (
     <div className="fixed inset-0 bg-background text-foreground" style={{ fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace' }}>
@@ -333,7 +338,6 @@ export default function LocationPage() {
               onClick={(e) => {
                 if (!e.uv) return;
                 e.stopPropagation();
-                const c = uvToCoord(e.uv, terrain, location.bounds);
                 if (waterFlowActive && flowState) {
                   const col = Math.floor((e.uv.x) * (terrain.width - 1));
                   const row = Math.floor((1 - e.uv.y) * (terrain.height - 1));
@@ -342,10 +346,10 @@ export default function LocationPage() {
                   return;
                 }
                 if (showPopulation && popGrid) {
+                  const c = uvToCoord(e.uv, terrain, location.bounds);
                   setPopPoint({ lat: c.lat, lon: c.lon, value: sampleGrid(popGrid, c.lon, c.lat) });
                   return;
                 }
-                copyCoords(c);
               }}
             >
               {showTerrain && (
@@ -360,6 +364,7 @@ export default function LocationPage() {
                   gamma={gamma}
                   tint={tint}
                   tintStrength={tintStrength}
+                  onLoadingChange={setTexLoading}
                 />
               )}
             </group>
@@ -415,6 +420,38 @@ export default function LocationPage() {
                 queryBounds={location.waterBounds ?? location.bounds}
               />
             )}
+            <OsmLinesLayer
+              terrain={terrain}
+              exaggeration={exaggeration}
+              bounds={location.bounds}
+              clipBounds={location.waterBounds ?? location.bounds}
+              enabled={showRoads}
+              cacheKey="osm-roads"
+              color="#e8b04b"
+              opacity={0.65}
+              lineWidth={1.1}
+              buildQuery={(bbox) => `[out:json][timeout:60];
+                (
+                  way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|track)$"](${bbox});
+                );
+                out geom;`}
+            />
+            <OsmLinesLayer
+              terrain={terrain}
+              exaggeration={exaggeration}
+              bounds={location.bounds}
+              clipBounds={location.waterBounds ?? location.bounds}
+              enabled={showBorders}
+              cacheKey="osm-borders"
+              color="#e05fd0"
+              opacity={0.7}
+              lineWidth={1.6}
+              buildQuery={(bbox) => `[out:json][timeout:60];
+                (
+                  relation["boundary"="administrative"]["admin_level"~"^(2|4)$"](${bbox});
+                );
+                out geom;`}
+            />
 
             {flowState && (
               <WaterFlowOverlay
@@ -435,6 +472,18 @@ export default function LocationPage() {
           </>
         )}
       </Canvas>
+
+      {/* Full-screen loader while terrain, imagery, and layer data are still loading */}
+      {(loading || texLoading) && (
+        <div className="absolute inset-0 z-30 grid place-items-center bg-background/95 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <div className="text-sm tech-font text-muted-foreground uppercase tracking-widest">
+              {loading ? `Loading terrain… ${Math.round((progress ?? 0) * 100)}%` : 'Loading imagery…'}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none">
@@ -499,6 +548,13 @@ export default function LocationPage() {
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem checked={showPlaces} onCheckedChange={(v) => setShowPlaces(!!v)}>
               Towns & villages
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem checked={showRoads} onCheckedChange={(v) => setShowRoads(!!v)}>
+              Roads
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem checked={showBorders} onCheckedChange={(v) => setShowBorders(!!v)}>
+              Borders
             </DropdownMenuCheckboxItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -576,8 +632,12 @@ export default function LocationPage() {
             </div>
             <button
               onClick={() => {
-                setBrightness(1.75); setContrast(0.8); setSaturation(0.6); setGamma(0.9);
-                setTint('#ffffff'); setTintStrength(0);
+                setBrightness(imgDefaults?.brightness ?? 1.75);
+                setContrast(imgDefaults?.contrast ?? 0.8);
+                setSaturation(imgDefaults?.saturation ?? 0.6);
+                setGamma(imgDefaults?.gamma ?? 0.9);
+                setTint(imgDefaults?.tint ?? '#ffffff');
+                setTintStrength(imgDefaults?.tintStrength ?? 0);
               }}
               className="w-full mt-1 text-[11px] px-2 py-1 rounded border border-border/60 hover:bg-accent"
             >

@@ -10,6 +10,8 @@ interface Props {
   exaggeration: number;
   token: string;
   onError?: (msg: string) => void;
+  /** Fires true while the basemap texture is being fetched/stitched, false once it settles (success or error). */
+  onLoadingChange?: (loading: boolean) => void;
   baseStyleOverride?: BaseStyle;
   brightness?: number;
   contrast?: number;
@@ -24,7 +26,7 @@ interface Props {
 }
 
 const MapboxTerrainMesh = ({
-  terrain, exaggeration, token, onError, baseStyleOverride,
+  terrain, exaggeration, token, onError, onLoadingChange, baseStyleOverride,
   brightness = 1, contrast = 1, saturation = 1, gamma = 1,
   tint = '#ffffff', tintStrength = 0, wireframe = false,
 }: Props) => {
@@ -39,10 +41,13 @@ const MapboxTerrainMesh = ({
     if (baseStyle !== 'osm' && baseStyle !== 'satlas' && !token) return;
     let cancelled = false;
     setSatellite(null);
+    onLoadingChange?.(true);
     loadBaseStyleTexture(terrain.bounds, baseStyle, token)
       .then((t) => { if (!cancelled) setSatellite(t); })
-      .catch((e) => { if (!cancelled) onError?.(e.message); });
+      .catch((e) => { if (!cancelled) onError?.(e.message); })
+      .finally(() => { if (!cancelled) onLoadingChange?.(false); });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, terrain.bounds, onError, baseStyle]);
 
   const geometry = useMemo(() => {
