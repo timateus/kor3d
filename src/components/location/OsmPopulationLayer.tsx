@@ -14,6 +14,8 @@ interface Props {
   intensity?: number;
   /** Fires once the grid is loaded, so the parent can sample values (e.g. on click). */
   onLoad?: (grid: PopulationGrid | null) => void;
+  /** Fires once loading settles (success or failure) — unlike onLoad, always fires. */
+  onSettled?: () => void;
 }
 
 // Yellow → orange → red → violet color ramp (heatmap-friendly)
@@ -82,7 +84,7 @@ function buildHeatmap(
  * the color hugs the relief, colored from the real GHS-POP (JRC) raster
  * pre-sampled per location by scripts/prefetch/ghs-pop.mjs in the main app.
  */
-const OsmPopulationLayer = ({ terrain, exaggeration, dataUrl, opacity = 0.75, intensity = 1, onLoad }: Props) => {
+const OsmPopulationLayer = ({ terrain, exaggeration, dataUrl, opacity = 0.75, intensity = 1, onLoad, onSettled }: Props) => {
   const [grid, setGrid] = useState<PopulationGrid | null>(null);
 
   useEffect(() => {
@@ -91,7 +93,8 @@ const OsmPopulationLayer = ({ terrain, exaggeration, dataUrl, opacity = 0.75, in
     onLoad?.(null);
     loadPopulationDensity(dataUrl)
       .then((g) => { if (!cancelled) { setGrid(g); onLoad?.(g); } })
-      .catch((e) => console.warn('GHS-POP load failed', e));
+      .catch((e) => console.warn('GHS-POP load failed', e))
+      .finally(() => { if (!cancelled) onSettled?.(); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataUrl]);

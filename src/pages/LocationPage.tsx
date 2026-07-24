@@ -154,7 +154,7 @@ export default function LocationPage() {
   const slug = params.slug ?? routerLoc.pathname.replace(/^\//, '').split('/')[0];
   const location = slug ? findLocation(slug) : undefined;
   const { token } = useTerrainMode();
-  const { terrain, loading, error, progress } = useMapterhornTerrain(location?.bounds ?? null, !!location);
+  const { terrain, loading, error } = useMapterhornTerrain(location?.bounds ?? null, !!location);
 
   const [exaggeration, setExaggeration] = useState(location?.exaggeration ?? 50);
   const [showInspector, setShowInspector] = useState(false);
@@ -167,6 +167,9 @@ export default function LocationPage() {
   const [showBorders, setShowBorders] = useState(false);
   const [showInat, setShowInat] = useState(true);
   const [texLoading, setTexLoading] = useState(true);
+  const [waterLoaded, setWaterLoaded] = useState(false);
+  const [placesLoaded, setPlacesLoaded] = useState(false);
+  const [popLoaded, setPopLoaded] = useState(false);
 
   // View mode & per-mode parameters
   const [terrainStyle, setTerrainStyle] = useState<TerrainStyle>('none');
@@ -304,6 +307,15 @@ export default function LocationPage() {
 
   const dataBase = `${import.meta.env.BASE_URL}data/locations/${location.slug}`;
 
+  // Single gate for the full-screen loader: terrain DEM, basemap imagery, and
+  // the default-on data layers (water, population, places). Buildings/roads/
+  // borders are off by default and don't block first paint.
+  const assetsLoading =
+    loading || texLoading ||
+    (showWater && !waterLoaded) ||
+    (showPopulation && !popLoaded) ||
+    (showPlaces && !placesLoaded);
+
   return (
     <div className="fixed inset-0 bg-background text-foreground" style={{ fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace' }}>
       <style>{`
@@ -385,6 +397,7 @@ export default function LocationPage() {
                 clipBounds={location.waterBounds ?? location.bounds}
                 dataUrl={`${dataBase}/${location.waterBounds ? 'water_large.json' : 'water.json'}`}
                 onSelect={setSelectedWater}
+                onLoaded={() => setWaterLoaded(true)}
               />
             )}
             {showOsmBuildings && (
@@ -409,6 +422,7 @@ export default function LocationPage() {
                 opacity={popOpacity}
                 intensity={popIntensity}
                 onLoad={setPopGrid}
+                onSettled={() => setPopLoaded(true)}
               />
             )}
             {showPlaces && (
@@ -418,6 +432,7 @@ export default function LocationPage() {
                 bounds={location.bounds}
                 dataUrl={`${dataBase}/places.json`}
                 queryBounds={location.waterBounds ?? location.bounds}
+                onLoaded={() => setPlacesLoaded(true)}
               />
             )}
             <OsmLinesLayer
@@ -436,19 +451,37 @@ export default function LocationPage() {
                 );
                 out geom;`}
             />
+            {/* National borders — the only ones drawn at full visibility. */}
             <OsmLinesLayer
               terrain={terrain}
               exaggeration={exaggeration}
               bounds={location.bounds}
               clipBounds={location.waterBounds ?? location.bounds}
               enabled={showBorders}
-              cacheKey="osm-borders"
+              cacheKey="osm-borders-national"
               color="#e05fd0"
               opacity={0.7}
               lineWidth={1.6}
               buildQuery={(bbox) => `[out:json][timeout:60];
                 (
-                  relation["boundary"="administrative"]["admin_level"~"^(2|4)$"](${bbox});
+                  relation["boundary"="administrative"]["admin_level"="2"](${bbox});
+                );
+                out geom;`}
+            />
+            {/* Sub-national (region/district) borders — kept, but nearly transparent. */}
+            <OsmLinesLayer
+              terrain={terrain}
+              exaggeration={exaggeration}
+              bounds={location.bounds}
+              clipBounds={location.waterBounds ?? location.bounds}
+              enabled={showBorders}
+              cacheKey="osm-borders-sub"
+              color="#e05fd0"
+              opacity={0.08}
+              lineWidth={1}
+              buildQuery={(bbox) => `[out:json][timeout:60];
+                (
+                  relation["boundary"="administrative"]["admin_level"~"^(3|4|5|6)$"](${bbox});
                 );
                 out geom;`}
             />
@@ -473,13 +506,13 @@ export default function LocationPage() {
         )}
       </Canvas>
 
-      {/* Full-screen loader while terrain, imagery, and layer data are still loading */}
-      {(loading || texLoading) && (
+      {/* Single full-screen loader covering all initial assets — one stable spinner/label, no mode-switching. */}
+      {assetsLoading && (
         <div className="absolute inset-0 z-30 grid place-items-center bg-background/95 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <div className="text-sm tech-font text-muted-foreground uppercase tracking-widest">
-              {loading ? `Loading terrain… ${Math.round((progress ?? 0) * 100)}%` : 'Loading imagery…'}
+              Loading {location.label}…
             </div>
           </div>
         </div>
@@ -503,20 +536,6 @@ export default function LocationPage() {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        {loading && (
-          <div className="flex flex-col gap-1 px-2.5 py-1.5 rounded-md bg-background/80 backdrop-blur border border-border/60 text-xs text-muted-foreground pointer-events-auto min-w-[180px]">
-            <div className="flex items-center gap-1.5">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              <span className="tech-font">Loading terrain… {Math.round((progress ?? 0) * 100)}%</span>
-            </div>
-            <div className="h-1 w-full rounded-full bg-border/60 overflow-hidden">
-              <div
-                className="h-full bg-primary transition-[width] duration-200"
-                style={{ width: `${Math.round((progress ?? 0) * 100)}%` }}
-              />
-            </div>
-          </div>
-        )}
         {error && (
           <div className="px-2 py-1 rounded-md bg-destructive/10 border border-destructive/40 text-destructive text-xs pointer-events-auto">
             {error}
@@ -896,6 +915,18 @@ export default function LocationPage() {
           click terrain to add water
         </div>
       )}
+
+      {/* Compass — always points true north relative to the current camera orientation. */}
+      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 pointer-events-none opacity-80">
+        <svg width="34" height="34" viewBox="0 0 34 34">
+          <circle cx="17" cy="17" r="15.5" fill="none" stroke="currentColor" strokeOpacity="0.35" strokeWidth="1" className="text-foreground" />
+          <g style={{ transform: `rotate(${-(camera?.headingDeg ?? 0)}deg)`, transformOrigin: '17px 17px', transition: 'transform 80ms linear' }}>
+            <path d="M17 5 L20.5 17 L17 14.5 L13.5 17 Z" fill="currentColor" className="text-primary" />
+            <path d="M17 29 L20 19 L17 21 L14 19 Z" fill="currentColor" fillOpacity="0.35" className="text-foreground" />
+            <text x="17" y="10" textAnchor="middle" fontSize="6" fontWeight="700" className="tech-font fill-primary">N</text>
+          </g>
+        </svg>
+      </div>
 
       {/* Attribution */}
       <div className="absolute bottom-1 left-2 text-[10px] font-mono text-muted-foreground/70">

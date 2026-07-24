@@ -43,7 +43,10 @@ export const LOCATIONS = [
   },
   {
     slug: 'caspian-sea',
-    bounds: { minLat: 44.00, maxLat: 47.00, minLon: 50.00, maxLon: 54.00 },
-    waterBounds: { minLat: 43.80, maxLat: 47.20, minLon: 49.70, maxLon: 54.30 },
+    bounds: { minLat: 36.00, maxLat: 47.60, minLon: 45.50, maxLon: 55.50 },
+    waterBounds: { minLat: 35.50, maxLat: 48.00, minLon: 44.80, maxLon: 56.20 },
+    // Sea-scale bbox spans 5 countries — unrestricted water/buildings queries
+    // return 100+ MB (unfetchable/unrenderable). See fetchWater's `coarse` param.
+    coarse: true,
   },
 ];

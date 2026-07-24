@@ -5,7 +5,7 @@ import path from "path";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   // GitHub Pages project sites are served from /<repo-name>/, not /.
-  base: mode === "production" ? "/aral3d-viewer/" : "/",
+  base: mode === "production" ? "/kor3d/" : "/",
   server: {
     host: "::",
     port: 8081,

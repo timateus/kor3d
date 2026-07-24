@@ -59,7 +59,27 @@ async function overpass(query) {
 
 const bbox = (b) => `${b.minLat},${b.minLon},${b.maxLat},${b.maxLon}`;
 
-async function fetchWater(b) {
+/**
+ * `coarse: true` switches to named-features-only, plus the sea's actual
+ * coastline (large seas are mapped as `natural=coastline` ways, not a
+ * filled water polygon). For sea-scale locations spanning many countries,
+ * the unrestricted query returns 100+ MB — mostly countless unnamed ponds
+ * and irrigation ditches — which is both unfetchable (Overpass/Node string
+ * limits) and unusable in a browser. At that scale what's visually
+ * significant is the coastline itself, named lakes, and named rivers.
+ */
+async function fetchWater(b, coarse = false) {
+  if (coarse) {
+    const q = `[out:json][timeout:80];
+      (
+        way["natural"="coastline"](${bbox(b)});
+        way["natural"="water"]["name"](${bbox(b)});
+        relation["natural"="water"]["name"](${bbox(b)});
+        way["waterway"="river"]["name"](${bbox(b)});
+      );
+      out geom;`;
+    return overpass(q);
+  }
   const q = `[out:json][timeout:80];
     (
       way["natural"="water"](${bbox(b)});
@@ -105,20 +125,25 @@ async function main() {
   for (const loc of targets) {
     console.log(`\n[${loc.slug}]`);
     const outDir = path.join('public/data/locations', loc.slug);
+    const coarse = !!loc.coarse;
 
     console.log('  water (small)…');
-    const waterSmall = await fetchWater(loc.bounds);
+    const waterSmall = await fetchWater(loc.bounds, coarse);
     await writeJson(path.join(outDir, 'water.json'), waterSmall);
 
     if (loc.waterBounds) {
       console.log('  water (large)…');
-      const waterLarge = await fetchWater(loc.waterBounds);
+      const waterLarge = await fetchWater(loc.waterBounds, coarse);
       await writeJson(path.join(outDir, 'water_large.json'), waterLarge);
     }
 
-    console.log('  buildings…');
-    const buildings = await fetchBuildings(loc.bounds);
-    await writeJson(path.join(outDir, 'buildings.json'), buildings);
+    if (loc.coarse) {
+      console.log('  buildings… skipped (sea-scale location, not fetchable at full detail)');
+    } else {
+      console.log('  buildings…');
+      const buildings = await fetchBuildings(loc.bounds);
+      await writeJson(path.join(outDir, 'buildings.json'), buildings);
+    }
 
     console.log('  places…');
     const places = await fetchPlaces(loc.waterBounds ?? loc.bounds);

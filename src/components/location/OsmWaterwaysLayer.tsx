@@ -22,6 +22,8 @@ interface Props {
   clipBounds?: GeoBounds;
   dataUrl?: string;
   onSelect?: (f: WaterFeature | null) => void;
+  /** Fires once the fetch settles (success or failure). */
+  onLoaded?: () => void;
 }
 
 const _cache = new Map<string, WaterFeature[]>();
@@ -55,18 +57,20 @@ async function fetchStatic(url: string): Promise<WaterFeature[]> {
   return parsed;
 }
 
-const OsmWaterwaysLayer = ({ terrain, exaggeration, bounds, clipBounds, dataUrl, onSelect }: Props) => {
+const OsmWaterwaysLayer = ({ terrain, exaggeration, bounds, clipBounds, dataUrl, onSelect, onLoaded }: Props) => {
   const [features, setFeatures] = useState<WaterFeature[] | null>(null);
   const { size } = useThree();
   const clip = clipBounds ?? bounds;
 
   useEffect(() => {
-    if (!dataUrl) { setFeatures([]); return; }
+    if (!dataUrl) { setFeatures([]); onLoaded?.(); return; }
     let cancelled = false;
     fetchStatic(dataUrl)
       .then((l) => { if (!cancelled) setFeatures(l); })
-      .catch((e) => { console.warn('OSM water fetch failed', e); if (!cancelled) setFeatures([]); });
+      .catch((e) => { console.warn('OSM water fetch failed', e); if (!cancelled) setFeatures([]); })
+      .finally(() => { if (!cancelled) onLoaded?.(); });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataUrl]);
 
   const group = useMemo(() => {

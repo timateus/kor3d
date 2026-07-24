@@ -163,16 +163,17 @@ export const LOCATIONS: LocationDef[] = [
     // Northern Caspian Sea near the Kazakh coast (Mangystau / Atyrau region).
     // The full Caspian spans ~1200 km N-S and is impractical for a single
     // bounded terrain tile like the other locations here.
+    // Full Caspian Sea, with a generous coastal margin on all sides.
     slug: 'caspian-sea',
-    label: 'Caspian Sea (North)',
-    center: { lat: 45.50, lon: 52.00 },
+    label: 'Caspian Sea',
+    center: { lat: 41.80, lon: 50.50 },
     bounds: {
-      minLat: 44.00, maxLat: 47.00,
-      minLon: 50.00, maxLon: 54.00,
+      minLat: 36.00, maxLat: 47.60,
+      minLon: 45.50, maxLon: 55.50,
     },
     waterBounds: {
-      minLat: 43.80, maxLat: 47.20,
-      minLon: 49.70, maxLon: 54.30,
+      minLat: 35.50, maxLat: 48.00,
+      minLon: 44.80, maxLon: 56.20,
     },
     exaggeration: 30,
   },

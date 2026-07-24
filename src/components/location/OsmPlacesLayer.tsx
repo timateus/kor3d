@@ -12,6 +12,8 @@ interface Props {
   dataUrl?: string;
   /** Wider bounding box for the live-Overpass fallback query (defaults to `bounds`). */
   queryBounds?: GeoBounds;
+  /** Fires once loading settles (success or failure). */
+  onLoaded?: () => void;
 }
 
 interface Place {
@@ -73,7 +75,7 @@ async function fetchPlacesStatic(url: string): Promise<Place[]> {
   return parsePlaces(await res.json());
 }
 
-export default function OsmPlacesLayer({ terrain, exaggeration, bounds, dataUrl, queryBounds }: Props) {
+export default function OsmPlacesLayer({ terrain, exaggeration, bounds, dataUrl, queryBounds, onLoaded }: Props) {
   const [places, setPlaces] = useState<Place[]>([]);
 
   useEffect(() => {
@@ -81,11 +83,12 @@ export default function OsmPlacesLayer({ terrain, exaggeration, bounds, dataUrl,
     const fallback = () =>
       fetchPlacesLive(queryBounds ?? bounds)
         .then((p) => { if (!cancelled) setPlaces(p); })
-        .catch((e) => console.warn('OSM places fetch failed', e));
+        .catch((e) => console.warn('OSM places fetch failed', e))
+        .finally(() => { if (!cancelled) onLoaded?.(); });
 
     if (dataUrl) {
       fetchPlacesStatic(dataUrl)
-        .then((p) => { if (!cancelled) setPlaces(p); })
+        .then((p) => { if (!cancelled) setPlaces(p); onLoaded?.(); })
         .catch(() => { if (!cancelled) fallback(); });
     } else {
       fallback();
