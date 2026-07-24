@@ -23,6 +23,8 @@ interface Props {
   buildQuery: (bbox: string) => string;
   /** Cache namespace so different layers/queries don't collide. */
   cacheKey: string;
+  /** Optional pre-baked static JSON (raw Overpass output) — tried first, avoids depending on flaky live Overpass mirrors. */
+  dataUrl?: string;
   color: string;
   opacity?: number;
   lineWidth?: number;
@@ -44,9 +46,16 @@ function parseElements(data: any): LineFeature[] {
   return out;
 }
 
-/** Generic renderer for OSM line/boundary data, fetched live (and cached) only while `enabled`. */
+async function fetchStatic(url: string): Promise<LineFeature[]> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Static ${res.status}`);
+  return parseElements(await res.json());
+}
+
+/** Generic renderer for OSM line/boundary data. Tries a static pre-baked file
+ * first (if given), falling back to a live Overpass query only while `enabled`. */
 const OsmLinesLayer = ({
-  terrain, exaggeration, bounds, clipBounds, enabled, buildQuery, cacheKey,
+  terrain, exaggeration, bounds, clipBounds, enabled, buildQuery, cacheKey, dataUrl,
   color, opacity = 0.6, lineWidth = 1.2,
 }: Props) => {
   const [features, setFeatures] = useState<LineFeature[] | null>(null);
@@ -58,12 +67,21 @@ const OsmLinesLayer = ({
     let cancelled = false;
     const bbox = `${clip.minLat},${clip.minLon},${clip.maxLat},${clip.maxLon}`;
     const key = `${cacheKey}:${bbox}`;
-    fetchOverpass<any>(buildQuery(bbox), key)
-      .then((json) => { if (!cancelled) setFeatures(parseElements(json)); })
-      .catch((e) => { console.warn(`${cacheKey} fetch failed`, e); if (!cancelled) setFeatures([]); });
+    const fallback = () =>
+      fetchOverpass<any>(buildQuery(bbox), key)
+        .then((json) => { if (!cancelled) setFeatures(parseElements(json)); })
+        .catch((e) => { console.warn(`${cacheKey} fetch failed`, e); if (!cancelled) setFeatures([]); });
+
+    if (dataUrl) {
+      fetchStatic(dataUrl)
+        .then((f) => { if (!cancelled) setFeatures(f); })
+        .catch(() => { if (!cancelled) fallback(); });
+    } else {
+      fallback();
+    }
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, clip.minLon, clip.minLat, clip.maxLon, clip.maxLat, cacheKey]);
+  }, [enabled, dataUrl, clip.minLon, clip.minLat, clip.maxLon, clip.maxLat, cacheKey]);
 
   const group = useMemo(() => {
     if (!enabled || !features || features.length === 0) return null;

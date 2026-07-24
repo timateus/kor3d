@@ -459,6 +459,7 @@ export default function LocationPage() {
               clipBounds={location.waterBounds ?? location.bounds}
               enabled={showBorders}
               cacheKey="osm-borders-national"
+              dataUrl={`${dataBase}/borders_national.json`}
               color="#e05fd0"
               opacity={0.7}
               lineWidth={1.6}
@@ -476,6 +477,7 @@ export default function LocationPage() {
               clipBounds={location.waterBounds ?? location.bounds}
               enabled={showBorders}
               cacheKey="osm-borders-sub"
+              dataUrl={`${dataBase}/borders_sub.json`}
               color="#e05fd0"
               opacity={0.08}
               lineWidth={1}

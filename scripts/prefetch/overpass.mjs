@@ -109,6 +109,24 @@ async function fetchPlaces(b) {
   return overpass(q);
 }
 
+async function fetchBordersNational(b) {
+  const q = `[out:json][timeout:80];
+    (
+      relation["boundary"="administrative"]["admin_level"="2"](${bbox(b)});
+    );
+    out geom;`;
+  return overpass(q);
+}
+
+async function fetchBordersSub(b) {
+  const q = `[out:json][timeout:80];
+    (
+      relation["boundary"="administrative"]["admin_level"~"^(3|4|5|6)$"](${bbox(b)});
+    );
+    out geom;`;
+  return overpass(q);
+}
+
 async function writeJson(file, data) {
   await fs.mkdir(path.dirname(file), { recursive: true });
   await fs.writeFile(file, JSON.stringify(data));
@@ -117,7 +135,9 @@ async function writeJson(file, data) {
 }
 
 async function main() {
-  const requested = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const bordersOnly = args.includes('--borders-only');
+  const requested = args.filter((a) => !a.startsWith('--'));
   const targets = requested.length
     ? LOCATIONS.filter((l) => requested.includes(l.slug))
     : LOCATIONS;
@@ -126,6 +146,17 @@ async function main() {
     console.log(`\n[${loc.slug}]`);
     const outDir = path.join('public/data/locations', loc.slug);
     const coarse = !!loc.coarse;
+
+    if (bordersOnly) {
+      console.log('  borders (national)…');
+      const bordersNational = await fetchBordersNational(loc.waterBounds ?? loc.bounds);
+      await writeJson(path.join(outDir, 'borders_national.json'), bordersNational);
+
+      console.log('  borders (sub-national)…');
+      const bordersSub = await fetchBordersSub(loc.waterBounds ?? loc.bounds);
+      await writeJson(path.join(outDir, 'borders_sub.json'), bordersSub);
+      continue;
+    }
 
     console.log('  water (small)…');
     const waterSmall = await fetchWater(loc.bounds, coarse);
@@ -148,6 +179,14 @@ async function main() {
     console.log('  places…');
     const places = await fetchPlaces(loc.waterBounds ?? loc.bounds);
     await writeJson(path.join(outDir, 'places.json'), places);
+
+    console.log('  borders (national)…');
+    const bordersNational = await fetchBordersNational(loc.waterBounds ?? loc.bounds);
+    await writeJson(path.join(outDir, 'borders_national.json'), bordersNational);
+
+    console.log('  borders (sub-national)…');
+    const bordersSub = await fetchBordersSub(loc.waterBounds ?? loc.bounds);
+    await writeJson(path.join(outDir, 'borders_sub.json'), bordersSub);
   }
   console.log('\nDone.');
 }
