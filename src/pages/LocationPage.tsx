@@ -13,6 +13,7 @@ import OsmWaterwaysLayer from '@/components/location/OsmWaterwaysLayer';
 import OsmPopulationLayer from '@/components/location/OsmPopulationLayer';
 import OsmPlacesLayer from '@/components/location/OsmPlacesLayer';
 import OsmLinesLayer from '@/components/location/OsmLinesLayer';
+import ResourcesLayer from '@/components/location/ResourcesLayer';
 import OsmBuildingsLayer from '@/components/location/OsmBuildingsLayer';
 import InaturalistLayer, { type InatObservation } from '@/components/location/InaturalistLayer';
 import type { PopulationGrid } from '@/lib/population-density';
@@ -165,6 +166,7 @@ export default function LocationPage() {
   const [showOsmBuildings, setShowOsmBuildings] = useState(false);
   const [showRoads, setShowRoads] = useState(false);
   const [showBorders, setShowBorders] = useState(false);
+  const [showResources, setShowResources] = useState(false);
   const [showInat, setShowInat] = useState(true);
   const [texLoading, setTexLoading] = useState(true);
   const [waterLoaded, setWaterLoaded] = useState(false);
@@ -487,6 +489,31 @@ export default function LocationPage() {
                 );
                 out geom;`}
             />
+            {/* Resource extraction: mining/quarries, oil & gas, logging, industrial areas. */}
+            <ResourcesLayer
+              terrain={terrain}
+              exaggeration={exaggeration}
+              bounds={location.bounds}
+              clipBounds={location.waterBounds ?? location.bounds}
+              enabled={showResources}
+            />
+            {/* Pipelines — reuses the generic line layer. */}
+            <OsmLinesLayer
+              terrain={terrain}
+              exaggeration={exaggeration}
+              bounds={location.bounds}
+              clipBounds={location.waterBounds ?? location.bounds}
+              enabled={showResources}
+              cacheKey="osm-pipelines"
+              color="#eab308"
+              opacity={0.55}
+              lineWidth={1.2}
+              buildQuery={(bbox) => `[out:json][timeout:60];
+                (
+                  way["man_made"="pipeline"](${bbox});
+                );
+                out geom;`}
+            />
 
             {flowState && (
               <WaterFlowOverlay
@@ -576,6 +603,9 @@ export default function LocationPage() {
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem checked={showBorders} onCheckedChange={(v) => setShowBorders(!!v)}>
               Borders
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem checked={showResources} onCheckedChange={(v) => setShowResources(!!v)}>
+              Resources (mining / oil & gas / logging)
             </DropdownMenuCheckboxItem>
           </DropdownMenuContent>
         </DropdownMenu>
