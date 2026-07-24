@@ -322,7 +322,7 @@ export default function LocationPage() {
         .location-serif, .display-font { font-family: "Sora", ui-sans-serif, system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
         .tech-font { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
       `}</style>
-      <Canvas camera={{ position: [-4.2, 4.2, -1.9], fov: 45, near: 0.1, far: 200 }} shadows={false}>
+      <Canvas camera={{ position: [-4.2, 4.2, -1.9], fov: 45, near: 0.1, far: 300 }} shadows={false}>
         <color attach="background" args={['#f3f0e7']} />
         <ambientLight intensity={0.9} />
         <directionalLight position={[10, 20, 10]} intensity={1.1} />
@@ -333,7 +333,7 @@ export default function LocationPage() {
           enableDamping
           dampingFactor={0.06}
           minDistance={1.5}
-          maxDistance={40}
+          maxDistance={110}
           maxPolarAngle={Math.PI / 2.05}
           mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }}
         />
