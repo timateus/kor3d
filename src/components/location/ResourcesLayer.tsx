@@ -26,6 +26,8 @@ interface Props {
   bounds: GeoBounds;
   clipBounds?: GeoBounds;
   enabled: boolean;
+  /** Optional pre-baked static JSON (raw Overpass output) — tried first, avoids depending on flaky live Overpass mirrors. */
+  dataUrl?: string;
 }
 
 const CATEGORY_STYLE: Record<Category, { color: string; label: string }> = {
@@ -69,6 +71,12 @@ function parseElements(data: any): { points: ResourcePoint[]; areas: ResourceAre
 
 const _cache = new Map<string, { points: ResourcePoint[]; areas: ResourceArea[] }>();
 
+async function fetchStatic(url: string): Promise<{ points: ResourcePoint[]; areas: ResourceArea[] }> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Static ${res.status}`);
+  return parseElements(await res.json());
+}
+
 async function fetchResources(b: GeoBounds): Promise<{ points: ResourcePoint[]; areas: ResourceArea[] }> {
   const bbox = `${b.minLat},${b.minLon},${b.maxLat},${b.maxLon}`;
   const key = `resources:${b.minLon.toFixed(4)},${b.minLat.toFixed(4)},${b.maxLon.toFixed(4)},${b.maxLat.toFixed(4)}`;
@@ -96,19 +104,28 @@ async function fetchResources(b: GeoBounds): Promise<{ points: ResourcePoint[]; 
   return parsed;
 }
 
-const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled }: Props) => {
+const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, dataUrl }: Props) => {
   const [data, setData] = useState<{ points: ResourcePoint[]; areas: ResourceArea[] } | null>(null);
   const clip = clipBounds ?? bounds;
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    fetchResources(clip)
-      .then((d) => { if (!cancelled) setData(d); })
-      .catch((e) => { console.warn('Resources fetch failed', e); if (!cancelled) setData({ points: [], areas: [] }); });
+    const fallback = () =>
+      fetchResources(clip)
+        .then((d) => { if (!cancelled) setData(d); })
+        .catch((e) => { console.warn('Resources fetch failed', e); if (!cancelled) setData({ points: [], areas: [] }); });
+
+    if (dataUrl) {
+      fetchStatic(dataUrl)
+        .then((d) => { if (!cancelled) setData(d); })
+        .catch(() => { if (!cancelled) fallback(); });
+    } else {
+      fallback();
+    }
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, clip.minLon, clip.minLat, clip.maxLon, clip.maxLat]);
+  }, [enabled, dataUrl, clip.minLon, clip.minLat, clip.maxLon, clip.maxLat]);
 
   const meshW = 10;
   const meshH = 10 * (terrain.height / terrain.width);

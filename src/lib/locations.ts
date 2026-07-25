@@ -150,11 +150,11 @@ export const LOCATIONS: LocationDef[] = [
     label: 'Aral Sea',
     center: { lat: 45.25, lon: 60.00 },
     bounds: {
-      minLat: 43.00, maxLat: 47.50,
+      minLat: 40.80, maxLat: 47.50,
       minLon: 57.50, maxLon: 62.50,
     },
     waterBounds: {
-      minLat: 42.80, maxLat: 47.70,
+      minLat: 40.60, maxLat: 47.70,
       minLon: 57.20, maxLon: 62.80,
     },
     exaggeration: 30,

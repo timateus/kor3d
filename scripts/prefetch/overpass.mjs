@@ -127,6 +127,43 @@ async function fetchBordersSub(b) {
   return overpass(q);
 }
 
+async function fetchResources(b) {
+  const q = `[out:json][timeout:80];
+    (
+      node["man_made"="mine"](${bbox(b)});
+      way["man_made"="mine"](${bbox(b)});
+      node["man_made"="petroleum_well"](${bbox(b)});
+      node["pipeline"="substation"](${bbox(b)});
+      way["landuse"="quarry"](${bbox(b)});
+      way["landuse"="industrial"](${bbox(b)});
+      way["industrial"="mine"](${bbox(b)});
+      way["industrial"="oil"](${bbox(b)});
+      way["industrial"="gas"](${bbox(b)});
+      way["landuse"="forestry"](${bbox(b)});
+      node["resource"](${bbox(b)});
+      way["resource"](${bbox(b)});
+    );
+    out geom;`;
+  return overpass(q);
+}
+
+// Overpass `out geom` includes a per-way `nodes` (raw node-id list) and
+// `bounds` that the renderer never reads (it only uses `geometry`/`tags`) —
+// stripping them cuts large buildings.json files roughly 30% for free.
+function stripUnusedFields(data) {
+  const elements = (data.elements || []).map((el) => {
+    const ne = { type: el.type, id: el.id };
+    if (el.geometry) ne.geometry = el.geometry.map((p) => ({ lat: round6(p.lat), lon: round6(p.lon) }));
+    if (el.tags) ne.tags = el.tags;
+    if (el.members) ne.members = el.members;
+    if (el.lat !== undefined) ne.lat = round6(el.lat);
+    if (el.lon !== undefined) ne.lon = round6(el.lon);
+    return ne;
+  });
+  return { elements };
+}
+const round6 = (n) => Math.round(n * 1e6) / 1e6;
+
 async function writeJson(file, data) {
   await fs.mkdir(path.dirname(file), { recursive: true });
   await fs.writeFile(file, JSON.stringify(data));
@@ -137,6 +174,7 @@ async function writeJson(file, data) {
 async function main() {
   const args = process.argv.slice(2);
   const bordersOnly = args.includes('--borders-only');
+  const resourcesOnly = args.includes('--resources-only');
   const requested = args.filter((a) => !a.startsWith('--'));
   const targets = requested.length
     ? LOCATIONS.filter((l) => requested.includes(l.slug))
@@ -146,6 +184,13 @@ async function main() {
     console.log(`\n[${loc.slug}]`);
     const outDir = path.join('public/data/locations', loc.slug);
     const coarse = !!loc.coarse;
+
+    if (resourcesOnly) {
+      console.log('  resources (mining/oil & gas/logging/industrial)…');
+      const resources = await fetchResources(loc.waterBounds ?? loc.bounds);
+      await writeJson(path.join(outDir, 'resources.json'), resources);
+      continue;
+    }
 
     if (bordersOnly) {
       console.log('  borders (national)…');
@@ -173,7 +218,7 @@ async function main() {
     } else {
       console.log('  buildings…');
       const buildings = await fetchBuildings(loc.bounds);
-      await writeJson(path.join(outDir, 'buildings.json'), buildings);
+      await writeJson(path.join(outDir, 'buildings.json'), stripUnusedFields(buildings));
     }
 
     console.log('  places…');
@@ -187,6 +232,10 @@ async function main() {
     console.log('  borders (sub-national)…');
     const bordersSub = await fetchBordersSub(loc.waterBounds ?? loc.bounds);
     await writeJson(path.join(outDir, 'borders_sub.json'), bordersSub);
+
+    console.log('  resources (mining/oil & gas/logging/industrial)…');
+    const resources = await fetchResources(loc.waterBounds ?? loc.bounds);
+    await writeJson(path.join(outDir, 'resources.json'), resources);
   }
   console.log('\nDone.');
 }

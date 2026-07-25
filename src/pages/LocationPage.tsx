@@ -496,6 +496,7 @@ export default function LocationPage() {
               bounds={location.bounds}
               clipBounds={location.waterBounds ?? location.bounds}
               enabled={showResources}
+              dataUrl={`${dataBase}/resources.json`}
             />
             {/* Pipelines — reuses the generic line layer. */}
             <OsmLinesLayer

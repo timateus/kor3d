@@ -38,8 +38,8 @@ export const LOCATIONS = [
   },
   {
     slug: 'aral-sea',
-    bounds: { minLat: 43.00, maxLat: 47.50, minLon: 57.50, maxLon: 62.50 },
-    waterBounds: { minLat: 42.80, maxLat: 47.70, minLon: 57.20, maxLon: 62.80 },
+    bounds: { minLat: 40.80, maxLat: 47.50, minLon: 57.50, maxLon: 62.50 },
+    waterBounds: { minLat: 40.60, maxLat: 47.70, minLon: 57.20, maxLon: 62.80 },
   },
   {
     slug: 'caspian-sea',
