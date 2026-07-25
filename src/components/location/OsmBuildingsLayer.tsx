@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { GeoBounds, TerrainData } from '@/lib/geotiff-loader';
+
+// Individual extruded meshes don't scale: a dense OSM area can have 100k+
+// building ways, and one THREE.Mesh per building means one draw call per
+// building — the GPU chokes long before the CPU does. Geometries are merged
+// into fixed-size batches (few draw calls total) and the element count is
+// capped so a single outlier location can't hang the main thread for minutes
+// synchronously triangulating extrusions.
+const MERGE_CHUNK_SIZE = 4000;
+const MAX_BUILDINGS = 60_000;
 
 interface Props {
   terrain: TerrainData;
@@ -96,8 +106,22 @@ const OsmBuildingsLayer = ({ terrain, exaggeration, bounds, dataUrl }: Props) =>
       metalness: 0.05,
     });
 
+    const source = buildings.length > MAX_BUILDINGS ? buildings.slice(0, MAX_BUILDINGS) : buildings;
+    if (buildings.length > MAX_BUILDINGS) {
+      console.warn(`OSM buildings: ${buildings.length} exceeds cap of ${MAX_BUILDINGS}, truncating`);
+    }
+
     const g = new THREE.Group();
-    for (const b of buildings) {
+    let pending: THREE.BufferGeometry[] = [];
+    const flushChunk = () => {
+      if (pending.length === 0) return;
+      const merged = pending.length === 1 ? pending[0] : mergeGeometries(pending, false);
+      if (pending.length > 1) for (const geo of pending) geo.dispose();
+      g.add(new THREE.Mesh(merged, material));
+      pending = [];
+    };
+
+    for (const b of source) {
       const shape = new THREE.Shape();
       let baseElev = terrain.minElevation;
       let baseSet = false;
@@ -133,15 +157,19 @@ const OsmBuildingsLayer = ({ terrain, exaggeration, bounds, dataUrl }: Props) =>
       geo.rotateX(-Math.PI / 2);
       const baseY = ((baseElev - terrain.minElevation) / elevRange) * maxH;
       geo.translate(0, baseY, 0);
-      const mesh = new THREE.Mesh(geo, material);
-      g.add(mesh);
+      pending.push(geo);
+      if (pending.length >= MERGE_CHUNK_SIZE) flushChunk();
     }
+    flushChunk();
     return g;
   }, [buildings, terrain, exaggeration, bounds]);
 
   useEffect(() => () => {
     if (!group) return;
-    group.traverse((o: any) => { if (o.geometry) o.geometry.dispose(); });
+    group.traverse((o: any) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) o.material.dispose();
+    });
   }, [group]);
 
   if (!group) return null;

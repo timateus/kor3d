@@ -148,25 +148,35 @@ async function fetchResources(b) {
 }
 
 // Overpass `out geom` includes a per-way `nodes` (raw node-id list) and
-// `bounds` that the renderer never reads (it only uses `geometry`/`tags`) —
-// stripping them cuts large buildings.json files roughly 30% for free.
+// `bounds` that no renderer reads (they only use `geometry`/`tags`/`lat`/`lon`)
+// — stripping them, plus rounding coordinates to ~11cm precision, cuts every
+// prefetched file by roughly 25-35% for free. Applied to all file types.
+const round6 = (n) => Math.round(n * 1e6) / 1e6;
+const roundGeom = (g) => g.map((p) => ({ lat: round6(p.lat), lon: round6(p.lon) }));
+
 function stripUnusedFields(data) {
   const elements = (data.elements || []).map((el) => {
     const ne = { type: el.type, id: el.id };
-    if (el.geometry) ne.geometry = el.geometry.map((p) => ({ lat: round6(p.lat), lon: round6(p.lon) }));
+    if (el.geometry) ne.geometry = roundGeom(el.geometry);
     if (el.tags) ne.tags = el.tags;
-    if (el.members) ne.members = el.members;
+    if (el.members) {
+      ne.members = el.members.map((m) => ({
+        type: m.type,
+        ref: m.ref,
+        role: m.role,
+        ...(m.geometry ? { geometry: roundGeom(m.geometry) } : {}),
+      }));
+    }
     if (el.lat !== undefined) ne.lat = round6(el.lat);
     if (el.lon !== undefined) ne.lon = round6(el.lon);
     return ne;
   });
   return { elements };
 }
-const round6 = (n) => Math.round(n * 1e6) / 1e6;
 
 async function writeJson(file, data) {
   await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.writeFile(file, JSON.stringify(data));
+  await fs.writeFile(file, JSON.stringify(stripUnusedFields(data)));
   const stat = await fs.stat(file);
   console.log(`  wrote ${file} (${(stat.size / 1024).toFixed(1)} KB)`);
 }
@@ -218,7 +228,7 @@ async function main() {
     } else {
       console.log('  buildings…');
       const buildings = await fetchBuildings(loc.bounds);
-      await writeJson(path.join(outDir, 'buildings.json'), stripUnusedFields(buildings));
+      await writeJson(path.join(outDir, 'buildings.json'), buildings);
     }
 
     console.log('  places…');
