@@ -17,6 +17,11 @@ export const LOCATIONS = [
     waterBounds: { minLat: 42.96, maxLat: 43.52, minLon: 76.62, maxLon: 77.28 },
   },
   {
+    slug: 'tuyuksu-glacier',
+    bounds: { minLat: 43.0213, maxLat: 43.0753, minLon: 77.0436, maxLon: 77.1176 },
+    waterBounds: { minLat: 42.8681, maxLat: 43.2285, minLon: 76.8342, maxLon: 77.3270 },
+  },
+  {
     slug: 'balqash',
     bounds: { minLat: 46.820, maxLat: 46.870, minLon: 74.960, maxLon: 75.030 },
     waterBounds: { minLat: 46.55, maxLat: 47.10, minLon: 74.55, maxLon: 75.40 },
@@ -40,6 +45,11 @@ export const LOCATIONS = [
     slug: 'aral-sea',
     bounds: { minLat: 40.80, maxLat: 47.50, minLon: 57.50, maxLon: 62.50 },
     waterBounds: { minLat: 40.60, maxLat: 47.70, minLon: 57.20, maxLon: 62.80 },
+  },
+  {
+    slug: 'garibaldi-squamish',
+    bounds: { minLat: 49.62, maxLat: 49.98, minLon: -123.28, maxLon: -122.88 },
+    waterBounds: { minLat: 49.50, maxLat: 50.10, minLon: -123.45, maxLon: -122.70 },
   },
   {
     slug: 'caspian-sea',

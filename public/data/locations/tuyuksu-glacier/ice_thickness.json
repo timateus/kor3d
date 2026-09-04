@@ -1,0 +1,11 @@
+{
+  "source": "Farinotti et al. 2019 consensus ice thickness estimate (RGI60-13.08624)",
+  "units": "meters",
+  "width": 160,
+  "height": 157,
+  "minLon": 77.06603543191399,
+  "minLat": 43.03215398720932,
+  "maxLon": 77.0945702745426,
+  "maxLat": 43.06010318889463,
+  "valuesFile": "ice_thickness.bin"
+}

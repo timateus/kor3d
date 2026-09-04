@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { GeoBounds, TerrainData } from '@/lib/geotiff-loader';
 import { cacheGet, cacheSet } from '@/lib/browser-cache';
+import TerrainDecal from './TerrainDecal';
 
 export interface InatObservation {
   id: number;
@@ -322,6 +323,17 @@ const InaturalistLayer = ({
             />
           </points>
         </>
+      )}
+
+      {/* Projects the selected observation's photo directly onto the terrain surface,
+          conforming to local relief instead of floating as a flat card. */}
+      {highlight?.o.photoUrl && (
+        <TerrainDecal
+          key={highlight.o.id}
+          imageUrl={highlight.o.photoUrl}
+          position={highlight.pos}
+          seed={highlight.o.id}
+        />
       )}
     </group>
   );

@@ -3,19 +3,26 @@ import { useParams, Navigate, Link, useLocation } from 'react-router-dom';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import { Loader2, Layers, Waves, Crosshair, Mountain, ArrowRight, Copy, Check, Sliders, Eye, X, Info } from 'lucide-react';
+import { Loader2, Layers, Waves, Crosshair, Mountain, ArrowRight, Copy, Check, Sliders, Eye, X, Info, Video, Plus, Trash2, Play, Circle, RotateCw, Snowflake, History } from 'lucide-react';
 import { findLocation, LOCATIONS } from '@/lib/locations';
 import { useMapterhornTerrain } from '@/hooks/useMapterhornTerrain';
 import { useTerrainMode } from '@/hooks/useTerrainMode';
 import MapboxTerrainMesh from '@/components/MapboxTerrainMesh';
 import TerrainStyleOverlay, { type TerrainStyle } from '@/components/TerrainStyleOverlay';
 import OsmWaterwaysLayer from '@/components/location/OsmWaterwaysLayer';
+import HydroBasinLayer from '@/components/location/HydroBasinLayer';
 import OsmPopulationLayer from '@/components/location/OsmPopulationLayer';
 import OsmPlacesLayer from '@/components/location/OsmPlacesLayer';
 import OsmLinesLayer from '@/components/location/OsmLinesLayer';
 import ResourcesLayer from '@/components/location/ResourcesLayer';
 import OsmBuildingsLayer from '@/components/location/OsmBuildingsLayer';
 import InaturalistLayer, { type InatObservation } from '@/components/location/InaturalistLayer';
+import GlacierOutlineLayer, { type GlacierFeatureProps, type ThicknessInfo } from '@/components/location/GlacierOutlineLayer';
+import GlacierChartPanel from '@/components/location/GlacierChartPanel';
+import GlacierRetreatLayer from '@/components/location/GlacierRetreatLayer';
+import GlacierRetreatPanel from '@/components/location/GlacierRetreatPanel';
+import FlyoverController from '@/components/location/FlyoverController';
+import { type FlyKeyframe, orbitKeyframes, ASPECTS, type AspectKey } from '@/lib/flyover';
 import type { PopulationGrid } from '@/lib/population-density';
 import { sampleGrid } from '@/lib/population-density';
 import WaterFlowOverlay from '@/components/WaterFlowOverlay';
@@ -93,6 +100,35 @@ function CameraProbe({ orbitRef, onChange }: { orbitRef: React.MutableRefObject<
   return null;
 }
 
+/** R3F's <Canvas camera={{...}}> only applies far/near/fov once at mount —
+ * later changes to that prop object are not synced to the live camera. For
+ * the basin-rivers view, `far` needs to track basin extent reactively (a
+ * fixed guess undershoots for off-center basins and everything vanishes
+ * past the stale clip plane once you zoom beyond it), so apply it
+ * imperatively here instead. */
+function CameraFarSync({ far }: { far: number }) {
+  const { camera } = useThree();
+  useEffect(() => {
+    const cam = camera as THREE.PerspectiveCamera;
+    if (cam.far === far) return;
+    cam.far = far;
+    cam.updateProjectionMatrix();
+  }, [camera, far]);
+  return null;
+}
+
+/** Line2 (fat-lines) hit-testing needs an explicit raycaster threshold or it
+ * defaults to 0 — an exact hit on the mathematically thin centerline, which
+ * is practically unclickable regardless of the rendered line width. Affects
+ * every Line2-based layer (basin rivers, OSM waterways/roads/borders). */
+function RaycasterTuning() {
+  const { raycaster } = useThree();
+  useEffect(() => {
+    (raycaster.params as any).Line2 = { threshold: 15 };
+  }, [raycaster]);
+  return null;
+}
+
 function UserPin({
   terrain, bounds, exaggeration, location,
 }: {
@@ -167,6 +203,16 @@ export default function LocationPage() {
   const [showRoads, setShowRoads] = useState(false);
   const [showBorders, setShowBorders] = useState(false);
   const [showResources, setShowResources] = useState(false);
+  const [showBasinRivers, setShowBasinRivers] = useState(true);
+  const [basinSceneRadius, setBasinSceneRadius] = useState<number | null>(null);
+  const [showGlacier, setShowGlacier] = useState(!!location?.hasGlacierData);
+  const [selectedGlacier, setSelectedGlacier] = useState<GlacierFeatureProps | null>(null);
+  const [showMassBalance, setShowMassBalance] = useState(false);
+  const [showIceThickness, setShowIceThickness] = useState(!!location?.hasIceThickness);
+  const [thicknessInfo, setThicknessInfo] = useState<ThicknessInfo | null>(null);
+  const [showRetreat, setShowRetreat] = useState(false);
+  const [retreatYear, setRetreatYear] = useState(1958);
+  const [retreatMeters, setRetreatMeters] = useState(0);
   const [showInat, setShowInat] = useState(true);
   const [texLoading, setTexLoading] = useState(true);
   const [waterLoaded, setWaterLoaded] = useState(false);
@@ -199,6 +245,9 @@ export default function LocationPage() {
   const [camera, setCamera] = useState<CameraInfo | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [selectedWater, setSelectedWater] = useState<import('@/components/location/OsmWaterwaysLayer').WaterFeature | null>(null);
+  const [selectedBasinRiver, setSelectedBasinRiver] = useState<import('@/components/location/HydroBasinLayer').RiverFeature | null>(null);
+  const [basinColorBy, setBasinColorBy] = useState<'order' | 'discharge'>('discharge');
+  const [basinMinOrder, setBasinMinOrder] = useState(3);
   const [selectedInat, setSelectedInat] = useState<InatObservation | null>(null);
   const [inatObs, setInatObs] = useState<InatObservation[]>([]);
   const [popGrid, setPopGrid] = useState<PopulationGrid | null>(null);
@@ -207,6 +256,17 @@ export default function LocationPage() {
   const flowLoopRef = useRef<number | null>(null);
   const orbitRef = useRef<any>(null);
 
+  // Flyover: keyframe path playback + video export
+  const [keyframes, setKeyframes] = useState<FlyKeyframe[]>([]);
+  const [flyDuration, setFlyDuration] = useState(8);
+  const [isFlying, setIsFlying] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [exportAspect, setExportAspect] = useState<AspectKey>('landscape');
+  const [exportSize, setExportSize] = useState<{ w: number; h: number } | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+
   const { location: userLoc, loading: locating, requestLocation } = useUserLocation();
 
   useEffect(() => {
@@ -214,6 +274,21 @@ export default function LocationPage() {
     setFlowState(createFlowState(terrain));
     setFlowKey((k) => k + 1);
   }, [terrain]);
+
+  useEffect(() => {
+    if (!showBasinRivers) { setBasinSceneRadius(null); setSelectedBasinRiver(null); }
+  }, [showBasinRivers]);
+
+  // Basin geometry can sit far off-center from the local terrain (e.g. Charyn
+  // is near the edge of the much larger Balqash basin) — size the camera's
+  // far/maxDistance from the basin's actual reported extent rather than a
+  // fixed guess, or the far side clips out of view when zoomed out to frame
+  // the whole thing. ~2.6x radius comfortably frames it (matches roughly
+  // radius / tan(fov/2) for this scene's 45° fov); far needs to clear
+  // maxDistance + radius for the worst-case (camera and far point on
+  // opposite sides of the target), so 4x with margin.
+  const basinMaxDistance = basinSceneRadius ? basinSceneRadius * 2.6 : 1500;
+  const basinFar = basinSceneRadius ? basinSceneRadius * 4 + 200 : 2000;
 
   useEffect(() => {
     if (!waterFlowActive || !flowState) return;
@@ -282,6 +357,70 @@ export default function LocationPage() {
   }, [inatObs]);
 
 
+  const addKeyframe = () => {
+    if (!camera) return;
+    setKeyframes((ks) => [...ks, { id: `kf-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, pos: camera.pos, target: camera.target }]);
+  };
+  const removeKeyframe = (id: string) => setKeyframes((ks) => ks.filter((k) => k.id !== id));
+  const clearKeyframes = () => setKeyframes([]);
+  const useOrbitPreset = () => {
+    if (!camera) return;
+    setKeyframes(orbitKeyframes(camera.target, camera.distance, camera.tiltDeg, camera.headingDeg, 8));
+  };
+
+  const playPreview = () => {
+    if (keyframes.length < 2 || isFlying) return;
+    setIsFlying(true);
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const startRecording = () => {
+    if (keyframes.length < 2 || !rendererRef.current || isRecording) return;
+    const canvasEl = rendererRef.current.domElement;
+    if (typeof canvasEl.captureStream !== 'function') {
+      alert('Video recording is not supported in this browser.');
+      return;
+    }
+    const { w, h } = ASPECTS[exportAspect];
+    setExportSize({ w, h });
+    // Give the canvas two frames to resize to the export resolution before we start capturing.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const stream = canvasEl.captureStream(30);
+      const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
+      const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12_000_000 });
+      recordedChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        downloadBlob(blob, `${location?.slug ?? 'flyover'}-${exportAspect}-${Date.now()}.webm`);
+        setExportSize(null);
+        setIsRecording(false);
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+      setIsFlying(true);
+    }));
+  };
+
+  const handleFlightDone = () => {
+    setIsFlying(false);
+    if (isRecording && recorderRef.current) {
+      recorderRef.current.stop();
+      recorderRef.current = null;
+    }
+  };
+
   const copyText = async (txt: string) => {
     try { await navigator.clipboard.writeText(txt); } catch { /* ignore */ }
     setCopied(txt);
@@ -324,7 +463,24 @@ export default function LocationPage() {
         .location-serif, .display-font { font-family: "Sora", ui-sans-serif, system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
         .tech-font { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
       `}</style>
-      <Canvas camera={{ position: [-4.2, 4.2, -1.9], fov: 45, near: 0.1, far: 300 }} shadows={false}>
+      <div
+        className={exportSize ? 'absolute top-1/2 left-1/2 ring-2 ring-primary' : 'absolute inset-0'}
+        style={exportSize ? {
+          width: exportSize.w,
+          height: exportSize.h,
+          transform: `translate(-50%, -50%) scale(${Math.min(
+            (window.innerWidth * 0.8) / exportSize.w,
+            (window.innerHeight * 0.8) / exportSize.h,
+          )})`,
+          transformOrigin: 'center',
+        } : undefined}
+      >
+      <Canvas
+        camera={{ position: [-4.2, 4.2, -1.9], fov: 45, near: 0.1, far: showBasinRivers ? basinFar : 300 }}
+        shadows={false}
+        gl={{ preserveDrawingBuffer: true }}
+        onCreated={(state) => { rendererRef.current = state.gl; }}
+      >
         <color attach="background" args={['#f3f0e7']} />
         <ambientLight intensity={0.9} />
         <directionalLight position={[10, 20, 10]} intensity={1.1} />
@@ -335,11 +491,14 @@ export default function LocationPage() {
           enableDamping
           dampingFactor={0.06}
           minDistance={1.5}
-          maxDistance={110}
+          maxDistance={showBasinRivers ? basinMaxDistance : 110}
           maxPolarAngle={Math.PI / 2.05}
           mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }}
         />
         <CameraProbe orbitRef={orbitRef} onChange={setCamera} />
+        <CameraFarSync far={showBasinRivers ? basinFar : 300} />
+        <RaycasterTuning />
+        <FlyoverController keyframes={keyframes} playing={isFlying} duration={flyDuration} orbitRef={orbitRef} onDone={handleFlightDone} />
 
         {terrain && (
           <>
@@ -402,8 +561,41 @@ export default function LocationPage() {
                 onLoaded={() => setWaterLoaded(true)}
               />
             )}
+            {showBasinRivers && (
+              <HydroBasinLayer
+                terrain={terrain}
+                exaggeration={exaggeration}
+                bounds={location.bounds}
+                riversUrl={`${dataBase}/basin_rivers.json`}
+                boundaryUrl={`${dataBase}/basin_boundary.json`}
+                colorBy={basinColorBy}
+                minOrder={basinMinOrder}
+                onExtent={setBasinSceneRadius}
+                onSelect={setSelectedBasinRiver}
+              />
+            )}
             {showOsmBuildings && (
               <OsmBuildingsLayer terrain={terrain} exaggeration={exaggeration} bounds={location.bounds} dataUrl={`${dataBase}/buildings.json`} />
+            )}
+            {showGlacier && location.hasGlacierData && (
+              <GlacierOutlineLayer
+                terrain={terrain}
+                exaggeration={exaggeration}
+                bounds={location.bounds}
+                dataUrl={`${dataBase}/all_glaciers.json`}
+                thicknessUrl={showIceThickness && location.hasIceThickness ? `${dataBase}/ice_thickness.json` : undefined}
+                onSelect={setSelectedGlacier}
+                onThickness={setThicknessInfo}
+              />
+            )}
+            {showRetreat && location.hasGlacierData && (
+              <GlacierRetreatLayer
+                terrain={terrain}
+                exaggeration={exaggeration}
+                bounds={location.bounds}
+                outlineUrl={`${dataBase}/all_glaciers.json`}
+                retreatMeters={retreatMeters}
+              />
             )}
             {showInat && (
               <InaturalistLayer
@@ -535,6 +727,7 @@ export default function LocationPage() {
           </>
         )}
       </Canvas>
+      </div>
 
       {/* Single full-screen loader covering all initial assets — one stable spinner/label, no mode-switching. */}
       {assetsLoading && (
@@ -585,9 +778,22 @@ export default function LocationPage() {
             <DropdownMenuCheckboxItem checked={showWater} onCheckedChange={(v) => setShowWater(!!v)}>
               Water
             </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem checked={showBasinRivers} onCheckedChange={(v) => setShowBasinRivers(!!v)}>
+              Basin rivers (HydroSHEDS)
+            </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem checked={showOsmBuildings} onCheckedChange={(v) => setShowOsmBuildings(!!v)}>
               Buildings
             </DropdownMenuCheckboxItem>
+            {location.hasGlacierData && (
+              <DropdownMenuCheckboxItem checked={showGlacier} onCheckedChange={(v) => setShowGlacier(!!v)}>
+                Glacier extent (GLIMS)
+              </DropdownMenuCheckboxItem>
+            )}
+            {location.hasGlacierData && location.hasIceThickness && (
+              <DropdownMenuCheckboxItem checked={showIceThickness} onCheckedChange={(v) => setShowIceThickness(!!v)}>
+                Color by ice thickness (Farinotti)
+              </DropdownMenuCheckboxItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuCheckboxItem checked={showInat} onCheckedChange={(v) => setShowInat(!!v)}>
               iNaturalist observations
@@ -701,6 +907,109 @@ export default function LocationPage() {
               onChange={setPopOpacity} format={(v) => v.toFixed(2)} />
             <Slider label="Intensity" value={popIntensity} min={0.1} max={4} step={0.05}
               onChange={setPopIntensity} format={(v) => v.toFixed(2)} />
+
+            {showBasinRivers && (
+              <>
+                <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground pt-2">Basin rivers (HydroSHEDS)</div>
+                <div className="grid grid-cols-2 gap-1 text-[11px]">
+                  <button
+                    onClick={() => setBasinColorBy('order')}
+                    className={`px-2 py-1 rounded border ${basinColorBy === 'order' ? 'bg-primary text-primary-foreground border-primary' : 'border-border/60 hover:bg-accent'}`}
+                  >
+                    By order
+                  </button>
+                  <button
+                    onClick={() => setBasinColorBy('discharge')}
+                    className={`px-2 py-1 rounded border ${basinColorBy === 'discharge' ? 'bg-primary text-primary-foreground border-primary' : 'border-border/60 hover:bg-accent'}`}
+                  >
+                    By discharge
+                  </button>
+                </div>
+                <Slider label="Min order" value={basinMinOrder} min={3} max={7} step={1}
+                  onChange={setBasinMinOrder} format={(v) => `${v}`} />
+                <div className="text-[10px] text-muted-foreground leading-snug">
+                  {basinColorBy === 'discharge'
+                    ? 'Width/color by average discharge (m³/s) — thicker & darker = more water.'
+                    : 'Width/color by Strahler stream order — thicker = more upstream tributaries.'}
+                  {' '}Click a river for its numbers.
+                </div>
+              </>
+            )}
+          </PopoverContent>
+        </Popover>
+
+        {/* Flyover: keyframe path playback + video export */}
+        <Popover>
+          <PopoverTrigger className={`${btnBase} ${keyframes.length > 0 ? 'text-primary border-primary/50' : ''}`}>
+            <Video className="w-3.5 h-3.5" /> Flyover
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+                Keyframes ({keyframes.length})
+              </div>
+              <div className="flex gap-1">
+                <button onClick={addKeyframe} className="p-1 rounded border border-border/60 hover:bg-accent" title="Add keyframe from current view">
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={useOrbitPreset} className="p-1 rounded border border-border/60 hover:bg-accent" title="Generate 360° orbit around current target">
+                  <RotateCw className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={clearKeyframes} disabled={keyframes.length === 0} className="p-1 rounded border border-border/60 hover:bg-accent disabled:opacity-40" title="Clear all">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {keyframes.length > 0 ? (
+              <div className="max-h-32 overflow-y-auto space-y-1">
+                {keyframes.map((k, i) => (
+                  <div key={k.id} className="flex items-center justify-between text-[11px] px-2 py-1 rounded bg-accent/40">
+                    <span>#{i + 1}</span>
+                    <button onClick={() => removeKeyframe(k.id)} className="text-muted-foreground hover:text-destructive">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[11px] text-muted-foreground">
+                Navigate the view, then add keyframes to build a path — or generate an orbit.
+              </div>
+            )}
+
+            <Slider label="Duration" value={flyDuration} min={2} max={40} step={1}
+              onChange={setFlyDuration} format={(v) => `${v}s`} />
+
+            <button
+              onClick={playPreview}
+              disabled={keyframes.length < 2 || isFlying}
+              className="w-full flex items-center justify-center gap-1.5 text-[11px] px-2 py-1.5 rounded border border-border/60 hover:bg-accent disabled:opacity-40"
+            >
+              <Play className="w-3.5 h-3.5" /> {isFlying && !isRecording ? 'Playing…' : 'Preview'}
+            </button>
+
+            <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground pt-1">Export</div>
+            <div className="grid grid-cols-3 gap-1 text-[11px]">
+              {(Object.keys(ASPECTS) as AspectKey[]).map((a) => (
+                <button
+                  key={a}
+                  onClick={() => setExportAspect(a)}
+                  disabled={isRecording}
+                  className={`px-2 py-1 rounded border disabled:opacity-40 ${exportAspect === a ? 'bg-primary text-primary-foreground border-primary' : 'border-border/60 hover:bg-accent'}`}
+                >
+                  {ASPECTS[a].label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={startRecording}
+              disabled={keyframes.length < 2 || isRecording}
+              className="w-full flex items-center justify-center gap-1.5 text-[11px] px-2 py-1.5 rounded border border-destructive/50 text-destructive hover:bg-destructive/10 disabled:opacity-40"
+            >
+              <Circle className={`w-3.5 h-3.5 ${isRecording ? 'animate-pulse fill-current' : ''}`} />
+              {isRecording ? 'Recording…' : `Record ${ASPECTS[exportAspect].w}×${ASPECTS[exportAspect].h}`}
+            </button>
           </PopoverContent>
         </Popover>
 
@@ -712,6 +1021,26 @@ export default function LocationPage() {
           <Waves className="w-3.5 h-3.5" />
           {waterFlowActive ? 'Pouring…' : 'Water flow'}
         </button>
+
+        {location.hasGlacierData && (
+          <button
+            className={`${btnBase} ${showMassBalance ? 'text-primary border-primary/50' : ''}`}
+            onClick={() => setShowMassBalance((v) => !v)}
+            title="Cumulative mass balance (WGMS)"
+          >
+            <Snowflake className="w-3.5 h-3.5" /> Mass balance
+          </button>
+        )}
+
+        {location.hasGlacierData && (
+          <button
+            className={`${btnBase} ${showRetreat ? 'text-primary border-primary/50' : ''}`}
+            onClick={() => setShowRetreat((v) => !v)}
+            title="Historical terminus position (WGMS front variation)"
+          >
+            <History className="w-3.5 h-3.5" /> Retreat
+          </button>
+        )}
 
         <button
           className={btnBase}
@@ -784,6 +1113,96 @@ export default function LocationPage() {
           >
             open in OSM →
           </a>
+        </div>
+      )}
+
+      {/* Glacier outline info (RGI 6.0 / GLIMS) */}
+      {selectedGlacier && (
+        <div className="absolute top-16 right-3 w-72 p-3 rounded-md bg-background/90 backdrop-blur border border-border/60 text-xs font-mono z-10">
+          <div className="flex items-center justify-between mb-2">
+            <span className="uppercase tracking-widest text-[10px] text-primary">Glacier · RGI 6.0</span>
+            <button onClick={() => setSelectedGlacier(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="text-sm font-sans font-semibold mb-1">{selectedGlacier.name ?? 'Unnamed'}</div>
+          <div className="space-y-0.5">
+            <div className="flex gap-2 leading-tight">
+              <span className="text-muted-foreground shrink-0">area</span>
+              <span>{selectedGlacier.area_km2?.toFixed(3) ?? '—'} km²</span>
+            </div>
+            <div className="flex gap-2 leading-tight">
+              <span className="text-muted-foreground shrink-0">elevation</span>
+              <span>{selectedGlacier.zmin ?? '—'}–{selectedGlacier.zmax ?? '—'} m</span>
+            </div>
+            <div className="flex gap-2 leading-tight">
+              <span className="text-muted-foreground shrink-0">RGI id</span>
+              <span>{selectedGlacier.rgi_id ?? '—'}</span>
+            </div>
+            {showIceThickness && thicknessInfo && selectedGlacier.rgi_id === 'RGI60-13.08624' && (
+              <>
+                <div className="flex gap-2 leading-tight pt-1 border-t border-border/40 mt-1">
+                  <span className="text-muted-foreground shrink-0">max ice depth</span>
+                  <span>{thicknessInfo.maxThicknessM.toFixed(0)} m</span>
+                </div>
+                <div className="flex gap-2 leading-tight">
+                  <span className="text-muted-foreground shrink-0">est. volume</span>
+                  <span>{(thicknessInfo.volumeM3 / 1e6).toFixed(1)} million m³</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground pt-0.5">Farinotti et al. 2019 consensus estimate (main glacier only)</div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Mass balance chart (WGMS FoG) */}
+      {showMassBalance && location.hasGlacierData && (
+        <GlacierChartPanel dataUrl={`${dataBase}/mass_balance.json`} onClose={() => setShowMassBalance(false)} />
+      )}
+
+      {/* Historical terminus retreat (WGMS front variation) */}
+      {showRetreat && location.hasGlacierData && (
+        <GlacierRetreatPanel
+          dataUrl={`${dataBase}/front_variation.json`}
+          year={retreatYear}
+          onYearChange={setRetreatYear}
+          onRetreatChange={setRetreatMeters}
+          onClose={() => setShowRetreat(false)}
+        />
+      )}
+
+      {/* Basin river info (HydroSHEDS) */}
+      {selectedBasinRiver && (
+        <div className="absolute top-16 right-3 w-72 p-3 rounded-md bg-background/90 backdrop-blur border border-border/60 text-xs font-mono z-10">
+          <div className="flex items-center justify-between mb-2">
+            <span className="uppercase tracking-widest text-[10px] text-primary">Basin river · order {selectedBasinRiver.ord_stra ?? '—'}</span>
+            <button onClick={() => setSelectedBasinRiver(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="text-lg font-sans font-semibold">
+            {selectedBasinRiver.dis_av_cms != null ? `${selectedBasinRiver.dis_av_cms.toFixed(2)} m³/s` : 'no discharge data'}
+          </div>
+          <div className="text-[10px] text-muted-foreground mb-2">average discharge</div>
+          <div className="space-y-0.5">
+            <div className="flex gap-2 leading-tight">
+              <span className="text-muted-foreground shrink-0">length</span>
+              <span>{selectedBasinRiver.length_km?.toFixed(2) ?? '—'} km</span>
+            </div>
+            <div className="flex gap-2 leading-tight">
+              <span className="text-muted-foreground shrink-0">Strahler order</span>
+              <span>{selectedBasinRiver.ord_stra ?? '—'}</span>
+            </div>
+            <div className="flex gap-2 leading-tight">
+              <span className="text-muted-foreground shrink-0">order class</span>
+              <span>{selectedBasinRiver.ord_clas ?? '—'}</span>
+            </div>
+            <div className="flex gap-2 leading-tight">
+              <span className="text-muted-foreground shrink-0">HydroRIVERS id</span>
+              <span>{selectedBasinRiver.id}</span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -963,7 +1382,7 @@ export default function LocationPage() {
 
       {/* Attribution */}
       <div className="absolute bottom-1 left-2 text-[10px] font-mono text-muted-foreground/70">
-        <span className="pointer-events-none">Elevation: Mapterhorn · Imagery: Satlas Super-Res 2023 (Allen Institute for AI) · Population: GHS-POP (JRC) · Observations: iNaturalist · Data © OpenStreetMap contributors</span>
+        <span className="pointer-events-none">Elevation: Mapterhorn · Imagery: Satlas Super-Res 2023 (Allen Institute for AI) · Population: GHS-POP (JRC) · Rivers/basins: HydroSHEDS (Lehner &amp; Grill) · Glaciers: GLIMS/NSIDC, WGMS FoG &amp; Farinotti et al. 2019 ice thickness · Observations: iNaturalist · Data © OpenStreetMap contributors</span>
       </div>
 
     </div>

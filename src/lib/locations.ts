@@ -15,6 +15,10 @@ export interface LocationDef {
   waterBounds?: GeoBounds;
   /** Optional default vertical exaggeration (1–30). */
   exaggeration?: number;
+  /** Has glacier_outline.json (GLIMS) + mass_balance.json (WGMS FoG) in its data folder. */
+  hasGlacierData?: boolean;
+  /** Has ice_thickness.json/.bin (Farinotti et al. 2019 consensus estimate) in its data folder. */
+  hasIceThickness?: boolean;
   /** Optional per-location basemap image adjustment defaults (see LocationPage's Image panel). */
   imageDefaults?: {
     brightness?: number;
@@ -73,6 +77,32 @@ export const LOCATIONS: LocationDef[] = [
       minLon: 76.62, maxLon: 77.28,
     },
     exaggeration: 30,
+  },
+  {
+    // Тұйықсу (Tuyuksu) Glacier — one of the world's most-studied glaciers,
+    // in the Trans-Ili Alatau just south of Almaty.
+    slug: 'tuyuksu-glacier',
+    label: 'Tuyuksu Glacier',
+    center: { lat: 43.0483, lon: 77.0806 },
+    bounds: {
+      minLat: 43.0213, maxLat: 43.0753,
+      minLon: 77.0436, maxLon: 77.1176,
+    },
+    waterBounds: {
+      minLat: 42.8681, maxLat: 43.2285,
+      minLon: 76.8342, maxLon: 77.3270,
+    },
+    exaggeration: 30,
+    hasGlacierData: true,
+    hasIceThickness: true,
+    imageDefaults: {
+      brightness: 1.0,
+      contrast: 1.5,
+      saturation: 0.8,
+      gamma: 0.9,
+      tint: '#ffffff',
+      tintStrength: 0,
+    },
   },
   {
     // Lake Balqash — shoreline at Balkhash city on the north shore.
@@ -156,6 +186,23 @@ export const LOCATIONS: LocationDef[] = [
     waterBounds: {
       minLat: 40.60, maxLat: 47.70,
       minLon: 57.20, maxLon: 62.80,
+    },
+    exaggeration: 30,
+  },
+  {
+    // Garibaldi Provincial Park & Squamish — Coast Mountains, BC, Canada.
+    // Spans Howe Sound / Squamish estuary up through the Chief, Garibaldi
+    // Lake, and Black Tusk.
+    slug: 'garibaldi-squamish',
+    label: 'Garibaldi-Squamish',
+    center: { lat: 49.80, lon: -123.08 },
+    bounds: {
+      minLat: 49.62, maxLat: 49.98,
+      minLon: -123.28, maxLon: -122.88,
+    },
+    waterBounds: {
+      minLat: 49.50, maxLat: 50.10,
+      minLon: -123.45, maxLon: -122.70,
     },
     exaggeration: 30,
   },

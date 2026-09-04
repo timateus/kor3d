@@ -1,0 +1,15 @@
+{
+  "source": "HydroSHEDS HydroBASINS/HydroRIVERS v1c (Lehner & Grill, 2013)",
+  "region": "as",
+  "level": 5,
+  "mainBas": 4050050220,
+  "polygonCount": 26,
+  "totalAreaKm2": 639853,
+  "riverCount": 8231,
+  "bbox": {
+    "minLon": 58.12083333333335,
+    "minLat": 34.483333333333356,
+    "maxLon": 75.1541666666667,
+    "maxLat": 46.43390062120228
+  }
+}
