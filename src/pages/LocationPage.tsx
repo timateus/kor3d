@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Navigate, Link, useLocation } from 'react-router-dom';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -233,6 +233,20 @@ export default function LocationPage() {
   const [gamma, setGamma] = useState(imgDefaults?.gamma ?? 0.9);
   const [tint, setTint] = useState(imgDefaults?.tint ?? '#ffffff');
   const [tintStrength, setTintStrength] = useState(imgDefaults?.tintStrength ?? 0);
+  const resetBasemap = useCallback(() => {
+    setBrightness(imgDefaults?.brightness ?? 1.75);
+    setContrast(imgDefaults?.contrast ?? 0.8);
+    setSaturation(imgDefaults?.saturation ?? 0.6);
+    setGamma(imgDefaults?.gamma ?? 0.9);
+    setTint(imgDefaults?.tint ?? '#ffffff');
+    setTintStrength(imgDefaults?.tintStrength ?? 0);
+  }, [imgDefaults]);
+  // The useState initializers above only run once, on this component's first
+  // mount — react-router doesn't remount LocationPage when navigating between
+  // slugs on the same route, so switching locations left the *previous*
+  // location's basemap sliders in place instead of picking up the new one's
+  // imageDefaults. Re-apply them whenever the location actually changes.
+  useEffect(() => { resetBasemap(); }, [resetBasemap]);
 
   // Population heatmap
   const [popOpacity, setPopOpacity] = useState(0.75);
@@ -243,16 +257,50 @@ export default function LocationPage() {
   const [flowKey, setFlowKey] = useState(0);
   const [hover, setHover] = useState<HoverCoord | null>(null);
   const [camera, setCamera] = useState<CameraInfo | null>(null);
+  // CameraProbe fires every rendered frame — routing that straight into React
+  // state (setCamera) forces a full LocationPage re-render at up to 60fps,
+  // permanently, on every location, regardless of which data layers are on
+  // (this was the actual cause of "still lagging with nothing turned on").
+  // Keep the live value in a ref for on-demand reads (flyover keyframe
+  // capture) and only push to React state — throttled — while the Inspector
+  // panel is actually open and displaying it.
+  const cameraRef = useRef<CameraInfo | null>(null);
+  const lastCameraSetAtRef = useRef(0);
+  const handleCameraChange = useCallback((info: CameraInfo) => {
+    cameraRef.current = info;
+    if (!showInspector) return;
+    const now = performance.now();
+    if (now - lastCameraSetAtRef.current < 150) return;
+    lastCameraSetAtRef.current = now;
+    setCamera(info);
+  }, [showInspector]);
   const [copied, setCopied] = useState<string | null>(null);
   const [selectedWater, setSelectedWater] = useState<import('@/components/location/OsmWaterwaysLayer').WaterFeature | null>(null);
   const [selectedBasinRiver, setSelectedBasinRiver] = useState<import('@/components/location/HydroBasinLayer').RiverFeature | null>(null);
   const [basinColorBy, setBasinColorBy] = useState<'order' | 'discharge'>('discharge');
+  const [basinDischargeScale, setBasinDischargeScale] = useState<'log' | 'linear'>('log');
   const [basinMinOrder, setBasinMinOrder] = useState(3);
   const [selectedInat, setSelectedInat] = useState<InatObservation | null>(null);
   const [inatObs, setInatObs] = useState<InatObservation[]>([]);
   const [popGrid, setPopGrid] = useState<PopulationGrid | null>(null);
   const [popPoint, setPopPoint] = useState<{ lat: number; lon: number; value: number | null } | null>(null);
   const lastUserInteractRef = useRef<number>(Date.now());
+  // True while the currently-shown inat card was a manual pick (vs. the
+  // ambient auto-cycle slideshow below) — read by that auto-cycle so it
+  // never swaps out an observation the user deliberately opened.
+  const inatManualRef = useRef(false);
+  // The various click-to-inspect popups (water, basin river, glacier, inat
+  // observation, population sample) all render as fixed-position overlay
+  // cards that can stack on top of each other. Selecting any one of them
+  // closes the rest, so only one is ever on screen at a time.
+  const closeAllPopups = () => {
+    setSelectedWater(null);
+    setSelectedBasinRiver(null);
+    setSelectedGlacier(null);
+    setSelectedInat(null);
+    inatManualRef.current = false;
+    setPopPoint(null);
+  };
   const flowLoopRef = useRef<number | null>(null);
   const orbitRef = useRef<any>(null);
 
@@ -303,21 +351,36 @@ export default function LocationPage() {
   }, [waterFlowActive, flowState]);
 
   // Wrap setSelectedInat so callers (points / auto-cycle) can indicate whether
-  // this was a manual user action.
+  // this was a manual user action. A manual pick closes every other popup
+  // (river/water/glacier/population) first, so only one card is ever showing,
+  // and latches inatManualRef so the ambient auto-cycle below leaves it alone
+  // until the user closes it — otherwise the mere passage of >5s idle while
+  // they're still reading it would swap in a new random observation.
   const selectInat = (o: InatObservation | null, manual: boolean) => {
-    if (manual) lastUserInteractRef.current = Date.now();
+    if (manual) {
+      lastUserInteractRef.current = Date.now();
+      closeAllPopups();
+    }
+    inatManualRef.current = manual && o != null;
     setSelectedInat(o);
   };
 
-  // Auto-cycle: after 5s of no manual interaction, pick a random observation
-  // and rotate every 2s until the user clicks something.
+  // Auto-cycle: an ambient slideshow that, after 5s with nothing selected,
+  // picks a random observation and keeps rotating every ~4s. It must not run
+  // while a *different* kind of popup (river/water/glacier/population) is
+  // open — that's `otherPopupOpen`, checked once per effect run — and each
+  // tick must not clobber a *manually* selected observation the user is
+  // currently reading (`inatManualRef`) — checked live inside pickRandom, not
+  // via the effect deps, since the ambient picks it makes itself shouldn't
+  // trigger a teardown/restart of its own loop.
+  const otherPopupOpen = !!(selectedWater || selectedBasinRiver || selectedGlacier || popPoint);
   useEffect(() => {
-    if (inatObs.length === 0) return;
+    if (inatObs.length === 0 || otherPopupOpen) return;
     let cancelled = false;
     let cycleTimer: number | null = null;
 
     const pickRandom = () => {
-      if (cancelled || inatObs.length === 0) return;
+      if (cancelled || inatObs.length === 0 || inatManualRef.current) return;
       const idle = Date.now() - lastUserInteractRef.current;
       if (idle < 5000) return;
       const next = inatObs[Math.floor(Math.random() * inatObs.length)];
@@ -326,8 +389,10 @@ export default function LocationPage() {
 
     const check = () => {
       if (cancelled) return;
-      const idle = Date.now() - lastUserInteractRef.current;
-      if (idle >= 5000) pickRandom();
+      if (!inatManualRef.current) {
+        const idle = Date.now() - lastUserInteractRef.current;
+        if (idle >= 5000) pickRandom();
+      }
       cycleTimer = window.setTimeout(check, 4000);
     };
     cycleTimer = window.setTimeout(check, 5000);
@@ -336,7 +401,7 @@ export default function LocationPage() {
       cancelled = true;
       if (cycleTimer) clearTimeout(cycleTimer);
     };
-  }, [inatObs]);
+  }, [inatObs, otherPopupOpen]);
 
   // Preload observation images into the browser cache so cycling is instant.
   useEffect(() => {
@@ -358,14 +423,16 @@ export default function LocationPage() {
 
 
   const addKeyframe = () => {
-    if (!camera) return;
-    setKeyframes((ks) => [...ks, { id: `kf-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, pos: camera.pos, target: camera.target }]);
+    const cam = cameraRef.current;
+    if (!cam) return;
+    setKeyframes((ks) => [...ks, { id: `kf-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, pos: cam.pos, target: cam.target }]);
   };
   const removeKeyframe = (id: string) => setKeyframes((ks) => ks.filter((k) => k.id !== id));
   const clearKeyframes = () => setKeyframes([]);
   const useOrbitPreset = () => {
-    if (!camera) return;
-    setKeyframes(orbitKeyframes(camera.target, camera.distance, camera.tiltDeg, camera.headingDeg, 8));
+    const cam = cameraRef.current;
+    if (!cam) return;
+    setKeyframes(orbitKeyframes(cam.target, cam.distance, cam.tiltDeg, cam.headingDeg, 8));
   };
 
   const playPreview = () => {
@@ -495,7 +562,7 @@ export default function LocationPage() {
           maxPolarAngle={Math.PI / 2.05}
           mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }}
         />
-        <CameraProbe orbitRef={orbitRef} onChange={setCamera} />
+        <CameraProbe orbitRef={orbitRef} onChange={handleCameraChange} />
         <CameraFarSync far={showBasinRivers ? basinFar : 300} />
         <RaycasterTuning />
         <FlyoverController keyframes={keyframes} playing={isFlying} duration={flyDuration} orbitRef={orbitRef} onDone={handleFlightDone} />
@@ -520,9 +587,14 @@ export default function LocationPage() {
                 }
                 if (showPopulation && popGrid) {
                   const c = uvToCoord(e.uv, terrain, location.bounds);
+                  closeAllPopups();
                   setPopPoint({ lat: c.lat, lon: c.lon, value: sampleGrid(popGrid, c.lon, c.lat) });
                   return;
                 }
+                // Plain click on open terrain, hitting no feature above (those
+                // stop propagation themselves) — treat as click-away and
+                // close whatever popup is currently showing.
+                closeAllPopups();
               }}
             >
               {showTerrain && (
@@ -557,7 +629,7 @@ export default function LocationPage() {
                 bounds={location.bounds}
                 clipBounds={location.waterBounds ?? location.bounds}
                 dataUrl={`${dataBase}/${location.waterBounds ? 'water_large.json' : 'water.json'}`}
-                onSelect={setSelectedWater}
+                onSelect={(f) => { closeAllPopups(); setSelectedWater(f); }}
                 onLoaded={() => setWaterLoaded(true)}
               />
             )}
@@ -569,9 +641,10 @@ export default function LocationPage() {
                 riversUrl={`${dataBase}/basin_rivers.json`}
                 boundaryUrl={`${dataBase}/basin_boundary.json`}
                 colorBy={basinColorBy}
+                dischargeScale={basinDischargeScale}
                 minOrder={basinMinOrder}
                 onExtent={setBasinSceneRadius}
-                onSelect={setSelectedBasinRiver}
+                onSelect={(f) => { closeAllPopups(); setSelectedBasinRiver(f); }}
               />
             )}
             {showOsmBuildings && (
@@ -584,7 +657,7 @@ export default function LocationPage() {
                 bounds={location.bounds}
                 dataUrl={`${dataBase}/all_glaciers.json`}
                 thicknessUrl={showIceThickness && location.hasIceThickness ? `${dataBase}/ice_thickness.json` : undefined}
-                onSelect={setSelectedGlacier}
+                onSelect={(f) => { closeAllPopups(); setSelectedGlacier(f); }}
                 onThickness={setThicknessInfo}
               />
             )}
@@ -889,14 +962,7 @@ export default function LocationPage() {
               <span className="font-mono w-10 text-right">{tintStrength.toFixed(2)}</span>
             </div>
             <button
-              onClick={() => {
-                setBrightness(imgDefaults?.brightness ?? 1.75);
-                setContrast(imgDefaults?.contrast ?? 0.8);
-                setSaturation(imgDefaults?.saturation ?? 0.6);
-                setGamma(imgDefaults?.gamma ?? 0.9);
-                setTint(imgDefaults?.tint ?? '#ffffff');
-                setTintStrength(imgDefaults?.tintStrength ?? 0);
-              }}
+              onClick={resetBasemap}
               className="w-full mt-1 text-[11px] px-2 py-1 rounded border border-border/60 hover:bg-accent"
             >
               Reset basemap
@@ -925,11 +991,29 @@ export default function LocationPage() {
                     By discharge
                   </button>
                 </div>
+                {basinColorBy === 'discharge' && (
+                  <div className="grid grid-cols-2 gap-1 text-[11px]">
+                    <button
+                      onClick={() => setBasinDischargeScale('log')}
+                      className={`px-2 py-1 rounded border ${basinDischargeScale === 'log' ? 'bg-primary text-primary-foreground border-primary' : 'border-border/60 hover:bg-accent'}`}
+                    >
+                      Log scale
+                    </button>
+                    <button
+                      onClick={() => setBasinDischargeScale('linear')}
+                      className={`px-2 py-1 rounded border ${basinDischargeScale === 'linear' ? 'bg-primary text-primary-foreground border-primary' : 'border-border/60 hover:bg-accent'}`}
+                    >
+                      Linear scale
+                    </button>
+                  </div>
+                )}
                 <Slider label="Min order" value={basinMinOrder} min={3} max={7} step={1}
                   onChange={setBasinMinOrder} format={(v) => `${v}`} />
                 <div className="text-[10px] text-muted-foreground leading-snug">
                   {basinColorBy === 'discharge'
-                    ? 'Width/color by average discharge (m³/s) — thicker & darker = more water.'
+                    ? (basinDischargeScale === 'linear'
+                      ? 'Width/color by average discharge (m³/s), true scale — small tributaries nearly vanish next to the mainstem.'
+                      : 'Width/color by average discharge (m³/s), log scale — thicker & darker = more water.')
                     : 'Width/color by Strahler stream order — thicker = more upstream tributaries.'}
                   {' '}Click a river for its numbers.
                 </div>

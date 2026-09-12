@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
-import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
-import { Line2 } from 'three/examples/jsm/lines/Line2.js';
+import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
+import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { useThree } from '@react-three/fiber';
 import type { GeoBounds, TerrainData } from '@/lib/geotiff-loader';
@@ -73,7 +73,14 @@ const OsmWaterwaysLayer = ({ terrain, exaggeration, bounds, clipBounds, dataUrl,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataUrl]);
 
-  const group = useMemo(() => {
+  // All features share one color/opacity, so every polyline can be packed as
+  // independent segments into a single LineSegments2 draw call instead of one
+  // Line2 (+ its own LineMaterial) per feature — thousands of separate fat-line
+  // meshes is what actually tanks the frame rate on big basins (e.g. Aral Sea's
+  // ~12k ways), not the JSON size. Per-feature click/hover still works: each
+  // segment's index in the merged buffer maps 1:1 to a slot in `segmentFeature`,
+  // and LineSegments2's raycast reports that slot back as `faceIndex`.
+  const lines = useMemo(() => {
     if (!features || features.length === 0) return null;
     const meshW = 10;
     const meshH = 10 * (terrain.height / terrain.width);
@@ -93,8 +100,8 @@ const OsmWaterwaysLayer = ({ terrain, exaggeration, bounds, clipBounds, dataUrl,
       return ((e - terrain.minElevation) / elevRange) * maxHeight + lift;
     };
 
-    const g = new THREE.Group();
-    const disposables: { geom: LineGeometry; mat: LineMaterial }[] = [];
+    const positions: number[] = [];
+    const segmentFeature: WaterFeature[] = [];
 
     for (const f of features) {
       // clip test against wider bounds
@@ -106,54 +113,58 @@ const OsmWaterwaysLayer = ({ terrain, exaggeration, bounds, clipBounds, dataUrl,
       }
       if (!anyInClip) continue;
 
-      const positions: number[] = [];
+      const pts: number[][] = [];
       for (const [lon, lat] of f.coords) {
         const nxT = (lon - bounds.minLon) / (bounds.maxLon - bounds.minLon);
         const nyT = (lat - bounds.minLat) / (bounds.maxLat - bounds.minLat);
         const x = (nxT - 0.5) * meshW;
         const z = -((nyT - 0.5) * meshH);
         const y = sampleY(nxT, nyT);
-        positions.push(x, y, z);
+        pts.push([x, y, z]);
       }
-      if (positions.length < 6) continue;
+      if (pts.length < 2) continue;
 
-      const geom = new LineGeometry();
-      geom.setPositions(new Float32Array(positions));
-      const mat = new LineMaterial({
-        color: waterColor.getHex(),
-        linewidth: 1.6,
-        transparent: true,
-        opacity: 0.7,
-        depthTest: true,
-        resolution: new THREE.Vector2(size.width, size.height),
-      });
-      const line = new Line2(geom, mat);
-      line.renderOrder = 2;
-      line.userData = { waterFeature: f };
-      g.add(line);
-      disposables.push({ geom, mat });
+      // LineSegmentsGeometry.setPositions treats the flat array as independent
+      // (start, end) pairs — not a connected strip — so consecutive points of
+      // this polyline are re-emitted as their own pair per segment.
+      for (let i = 0; i < pts.length - 1; i++) {
+        positions.push(...pts[i], ...pts[i + 1]);
+        segmentFeature.push(f);
+      }
     }
-    (g.userData as any).__disposables = disposables;
-    return g;
+    if (positions.length === 0) return null;
+
+    const geom = new LineSegmentsGeometry();
+    geom.setPositions(positions);
+    const mat = new LineMaterial({
+      color: waterColor.getHex(),
+      linewidth: 1.6,
+      transparent: true,
+      opacity: 0.7,
+      depthTest: true,
+      resolution: new THREE.Vector2(size.width, size.height),
+    });
+    const obj = new LineSegments2(geom, mat);
+    obj.renderOrder = 2;
+    return { obj, geom, mat, segmentFeature };
   }, [features, terrain, exaggeration, bounds, clip.minLon, clip.minLat, clip.maxLon, clip.maxLat, size.width, size.height]);
 
   useEffect(() => () => {
-    if (!group) return;
-    const d = (group.userData as any).__disposables as { geom: LineGeometry; mat: LineMaterial }[] | undefined;
-    if (d) for (const { geom, mat } of d) { geom.dispose(); mat.dispose(); }
-  }, [group]);
+    if (!lines) return;
+    lines.geom.dispose();
+    lines.mat.dispose();
+  }, [lines]);
 
-  if (!group) return null;
+  if (!lines) return null;
   return (
     <primitive
-      object={group}
+      object={lines.obj}
       onClick={(e: any) => {
-        const obj = e.object;
-        const f = obj?.userData?.waterFeature as WaterFeature | undefined;
+        const f = typeof e.faceIndex === 'number' ? lines.segmentFeature[e.faceIndex] : undefined;
         if (f) { e.stopPropagation(); onSelect?.(f); }
       }}
       onPointerOver={(e: any) => {
-        const f = e.object?.userData?.waterFeature;
+        const f = typeof e.faceIndex === 'number' ? lines.segmentFeature[e.faceIndex] : undefined;
         if (f) document.body.style.cursor = 'pointer';
       }}
       onPointerOut={() => { document.body.style.cursor = ''; }}

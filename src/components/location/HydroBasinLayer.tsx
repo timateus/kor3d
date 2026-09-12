@@ -37,6 +37,13 @@ interface Props {
    * sizes/colors by average discharge (m³/s) — actual water volume, so
    * rivers can be compared by contribution rather than just network position. */
   colorBy: 'order' | 'discharge';
+  /** Only used when colorBy === 'discharge'. 'log' compresses discharge's
+   * heavy right skew so headwater streams stay visible next to a trunk
+   * river a thousand times larger — but that compression also flattens the
+   * visual gap between, say, a 50 m³/s and a 500 m³/s reach. 'linear' keeps
+   * the true proportional difference, at the cost of small tributaries
+   * shrinking to near-nothing next to a big basin's mainstem. */
+  dischargeScale: 'log' | 'linear';
   /** Client-side Strahler-order floor on top of what's in the prefetched
    * file (which is already filtered at fetch time via --min-stra) — lets
    * you declutter further without re-running the prefetch script. */
@@ -73,9 +80,13 @@ function opacityForOrdClas(ordClas: number | undefined): number {
 }
 
 // Discharge is heavily right-skewed (a handful of trunk reaches carry most
-// of the water) so scale log10, normalized against this basin's own max.
-function dischargeNorm(dis: number | undefined, maxDis: number): number {
+// of the water). 'log' scale compresses that skew via log10, normalized
+// against this basin's own max, so headwater streams stay visible next to
+// the mainstem; 'linear' preserves the true proportional difference between
+// reaches instead, at the cost of small tributaries nearly disappearing.
+function dischargeNorm(dis: number | undefined, maxDis: number, scale: 'log' | 'linear'): number {
   const d = Math.max(0, dis ?? 0);
+  if (scale === 'linear') return Math.min(1, d / (maxDis || 1));
   const denom = Math.log10(maxDis + 1) || 1;
   return Math.min(1, Math.log10(d + 1) / denom);
 }
@@ -87,7 +98,7 @@ function opacityForDischarge(norm: number): number {
 }
 
 const HydroBasinLayer = ({
-  exaggeration, bounds, terrain, riversUrl, boundaryUrl, colorBy, minOrder, onLoaded, onSelect, onExtent,
+  exaggeration, bounds, terrain, riversUrl, boundaryUrl, colorBy, dischargeScale, minOrder, onLoaded, onSelect, onExtent,
 }: Props) => {
   const [rivers, setRivers] = useState<GeoJSON.FeatureCollection<GeoJSON.LineString, RiverFeature> | null>(null);
   const [boundary, setBoundary] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -158,7 +169,7 @@ const HydroBasinLayer = ({
       if ((p.ord_stra ?? 0) < minOrder) continue;
       let color: number, width: number, opacity: number;
       if (colorBy === 'discharge') {
-        const norm = dischargeNorm(p.dis_av_cms, maxDis);
+        const norm = dischargeNorm(p.dis_av_cms, maxDis, dischargeScale);
         color = lowColor.clone().lerp(highColor, norm).getHex();
         width = widthForDischarge(norm);
         opacity = opacityForDischarge(norm);
@@ -185,7 +196,7 @@ const HydroBasinLayer = ({
 
     (g.userData as any).__disposables = disposables;
     return { group: g, sceneRadius: maxDistFromOrigin };
-  }, [rivers, boundary, terrain, exaggeration, bounds, colorBy, minOrder, size.width, size.height]);
+  }, [rivers, boundary, terrain, exaggeration, bounds, colorBy, dischargeScale, minOrder, size.width, size.height]);
 
   useEffect(() => {
     if (sceneRadius > 0) onExtent?.(sceneRadius);

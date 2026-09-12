@@ -1,15 +1,25 @@
 {
   "source": "HydroSHEDS HydroBASINS/HydroRIVERS v1c (Lehner & Grill, 2013)",
+  "note": "Union of two separate HydroBASINS endorheic units: the Aral Sea/Amu Darya sink (MAIN_BAS 4050050220) and the Syrdarya basin (MAIN_BAS 4050050240), which HydroSHEDS does NOT merge downstream \u2014 Syrdarya's modeled basin doesn't connect to the Aral sink in this dataset.",
   "region": "as",
   "level": 5,
-  "mainBas": 4050050220,
-  "polygonCount": 26,
-  "totalAreaKm2": 639853,
-  "riverCount": 8231,
-  "bbox": {
-    "minLon": 58.12083333333335,
-    "minLat": 34.483333333333356,
-    "maxLon": 75.1541666666667,
-    "maxLat": 46.43390062120228
-  }
+  "basins": [
+    {
+      "name": "aral-sea/amu-darya",
+      "mainBas": 4050050220,
+      "polygonCount": 26,
+      "totalAreaKm2": 639853,
+      "riverCount": 8231
+    },
+    {
+      "name": "syrdarya",
+      "mainBas": 4050050240,
+      "polygonCount": 9,
+      "totalAreaKm2": 325873,
+      "riverCount": 4152
+    }
+  ],
+  "polygonCount": 35,
+  "totalAreaKm2": 965726,
+  "riverCount": 12383
 }
