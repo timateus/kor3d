@@ -11,6 +11,7 @@ import MapboxTerrainMesh from '@/components/MapboxTerrainMesh';
 import TerrainStyleOverlay, { type TerrainStyle } from '@/components/TerrainStyleOverlay';
 import OsmWaterwaysLayer from '@/components/location/OsmWaterwaysLayer';
 import HydroBasinLayer from '@/components/location/HydroBasinLayer';
+import IrrigationCanalsLayer, { type CanalFeature, type ReservoirFeature } from '@/components/location/IrrigationCanalsLayer';
 import OsmPopulationLayer from '@/components/location/OsmPopulationLayer';
 import OsmPlacesLayer from '@/components/location/OsmPlacesLayer';
 import OsmLinesLayer from '@/components/location/OsmLinesLayer';
@@ -207,6 +208,9 @@ export default function LocationPage() {
   const [basinSceneRadius, setBasinSceneRadius] = useState<number | null>(null);
   const [showGlacier, setShowGlacier] = useState(!!location?.hasGlacierData);
   const [selectedGlacier, setSelectedGlacier] = useState<GlacierFeatureProps | null>(null);
+  const [showCanals, setShowCanals] = useState(!!location?.hasCanalData);
+  const [selectedCanal, setSelectedCanal] = useState<CanalFeature | null>(null);
+  const [selectedReservoir, setSelectedReservoir] = useState<ReservoirFeature | null>(null);
   const [showMassBalance, setShowMassBalance] = useState(false);
   const [showIceThickness, setShowIceThickness] = useState(!!location?.hasIceThickness);
   const [thicknessInfo, setThicknessInfo] = useState<ThicknessInfo | null>(null);
@@ -297,6 +301,8 @@ export default function LocationPage() {
     setSelectedWater(null);
     setSelectedBasinRiver(null);
     setSelectedGlacier(null);
+    setSelectedCanal(null);
+    setSelectedReservoir(null);
     setSelectedInat(null);
     inatManualRef.current = false;
     setPopPoint(null);
@@ -670,6 +676,16 @@ export default function LocationPage() {
                 retreatMeters={retreatMeters}
               />
             )}
+            {showCanals && location.hasCanalData && (
+              <IrrigationCanalsLayer
+                terrain={terrain}
+                exaggeration={exaggeration}
+                bounds={location.bounds}
+                dataUrl={`${dataBase}/water_accounting.json`}
+                onSelectCanal={(c) => { closeAllPopups(); setSelectedCanal(c); }}
+                onSelectReservoir={(r) => { closeAllPopups(); setSelectedReservoir(r); }}
+              />
+            )}
             {showInat && (
               <InaturalistLayer
                 terrain={terrain}
@@ -865,6 +881,11 @@ export default function LocationPage() {
             {location.hasGlacierData && location.hasIceThickness && (
               <DropdownMenuCheckboxItem checked={showIceThickness} onCheckedChange={(v) => setShowIceThickness(!!v)}>
                 Color by ice thickness (Farinotti)
+              </DropdownMenuCheckboxItem>
+            )}
+            {location.hasCanalData && (
+              <DropdownMenuCheckboxItem checked={showCanals} onCheckedChange={(v) => setShowCanals(!!v)}>
+                Irrigation canals &amp; reservoirs (ICWC)
               </DropdownMenuCheckboxItem>
             )}
             <DropdownMenuSeparator />
@@ -1197,6 +1218,50 @@ export default function LocationPage() {
           >
             open in OSM →
           </a>
+        </div>
+      )}
+
+      {/* Irrigation canal — design capacity (not per-year actual data) */}
+      {selectedCanal && (
+        <div className="absolute top-16 right-3 w-72 p-3 rounded-md bg-background/90 backdrop-blur border border-border/60 text-xs font-mono z-10">
+          <div className="flex items-center justify-between mb-2">
+            <span className="uppercase tracking-widest text-[10px] text-primary">Irrigation canal</span>
+            <button onClick={() => setSelectedCanal(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="text-sm font-sans font-semibold mb-1">{selectedCanal.name}</div>
+          <div className="text-sm mb-1">{selectedCanal.capacity_m3s} m³/s design capacity</div>
+          {selectedCanal.note && (
+            <div className="text-[10px] text-muted-foreground leading-snug">{selectedCanal.note}</div>
+          )}
+          <div className="text-[10px] text-muted-foreground mt-2">
+            Route is approximate (intake → endpoint city), not a surveyed alignment. Source: cawater-info.net.
+          </div>
+        </div>
+      )}
+
+      {/* Reservoir — real NIC ICWC seasonal water-balance figures */}
+      {selectedReservoir && (
+        <div className="absolute top-16 right-3 w-72 p-3 rounded-md bg-background/90 backdrop-blur border border-border/60 text-xs font-mono z-10">
+          <div className="flex items-center justify-between mb-2">
+            <span className="uppercase tracking-widest text-[10px] text-primary">Reservoir · NIC ICWC</span>
+            <button onClick={() => setSelectedReservoir(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="text-sm font-sans font-semibold mb-1">{selectedReservoir.name}</div>
+          <div className="text-[10px] text-muted-foreground mb-2">{selectedReservoir.river} · {selectedReservoir.period}</div>
+          <div className="space-y-0.5">
+            <div className="flex justify-between"><span className="text-muted-foreground">приток (факт)</span><span>{selectedReservoir.inflow_km3} км³</span></div>
+            {selectedReservoir.inflow_plan_km3 != null && (
+              <div className="flex justify-between"><span className="text-muted-foreground">приток (план)</span><span>{selectedReservoir.inflow_plan_km3} км³</span></div>
+            )}
+            <div className="flex justify-between"><span className="text-muted-foreground">попуск/выпуск</span><span>{selectedReservoir.release_km3} км³</span></div>
+          </div>
+          {selectedReservoir.note && (
+            <div className="text-[10px] text-muted-foreground mt-2 leading-snug">{selectedReservoir.note}</div>
+          )}
         </div>
       )}
 

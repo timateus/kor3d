@@ -19,6 +19,9 @@ export interface LocationDef {
   hasGlacierData?: boolean;
   /** Has ice_thickness.json/.bin (Farinotti et al. 2019 consensus estimate) in its data folder. */
   hasIceThickness?: boolean;
+  /** Has water_accounting.json — real (not HydroSHEDS-modeled) irrigation
+   * canal design capacities and NIC ICWC reservoir/withdrawal figures. */
+  hasCanalData?: boolean;
   /** Optional per-location basemap image adjustment defaults (see LocationPage's Image panel). */
   imageDefaults?: {
     brightness?: number;
@@ -186,6 +189,27 @@ export const LOCATIONS: LocationDef[] = [
     waterBounds: {
       minLat: 40.60, maxLat: 47.70,
       minLon: 57.20, maxLon: 62.80,
+    },
+    exaggeration: 30,
+    hasCanalData: true,
+  },
+  {
+    // Barsakelmes solonchak — a ~70×40 km salt-marsh depression in
+    // Karakalpakstan (Uzbekistan) at the foot of the Ustyurt Plateau, the
+    // former bed of the prehistoric Tethys Sea. Not to be confused with the
+    // separate Barsakelmes island/nature reserve on the Kazakh side of the
+    // Aral Sea (~46°14'N 59°41'E) — this is the Karakalpak one, centered
+    // near the viewpoint at 43.34467, 58.04557.
+    slug: 'barsakelmes',
+    label: 'Barsakelmes',
+    center: { lat: 43.35, lon: 58.05 },
+    bounds: {
+      minLat: 43.00, maxLat: 43.70,
+      minLon: 57.55, maxLon: 58.55,
+    },
+    waterBounds: {
+      minLat: 42.70, maxLat: 44.00,
+      minLon: 57.20, maxLon: 58.90,
     },
     exaggeration: 30,
   },

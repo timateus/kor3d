@@ -47,6 +47,11 @@ export const LOCATIONS = [
     waterBounds: { minLat: 40.60, maxLat: 47.70, minLon: 57.20, maxLon: 62.80 },
   },
   {
+    slug: 'barsakelmes',
+    bounds: { minLat: 43.00, maxLat: 43.70, minLon: 57.55, maxLon: 58.55 },
+    waterBounds: { minLat: 42.70, maxLat: 44.00, minLon: 57.20, maxLon: 58.90 },
+  },
+  {
     slug: 'garibaldi-squamish',
     bounds: { minLat: 49.62, maxLat: 49.98, minLon: -123.28, maxLon: -122.88 },
     waterBounds: { minLat: 49.50, maxLat: 50.10, minLon: -123.45, maxLon: -122.70 },

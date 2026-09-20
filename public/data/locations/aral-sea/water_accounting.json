@@ -1,0 +1,165 @@
+{
+  "source": "NIC ICWC (Interstate Commission for Water Coordination of Central Asia), analytical reports on the Amu Darya/Syr Darya water situation (sic.icwc-aral.uz), plus canal design capacities from cawater-info.net's Amu Darya knowledge base. Canal geometry is an approximate route (intake point to endpoint city), not a surveyed alignment.",
+  "canals": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "name": "Karakum Canal (Garagum Derýasy)",
+          "kind": "design_capacity",
+          "capacity_m3s": 700,
+          "note": "~1000 km long, world's longest irrigation canal. Design mean annual withdrawal ~700 m³/s ≈ 18 km³/year from the Amu Darya, diverted to southern Turkmenistan."
+        },
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [65.30, 37.85],
+            [63.60, 37.80],
+            [61.83, 37.60],
+            [60.50, 37.30],
+            [58.38, 37.95]
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "name": "Amu-Bukhara Canal",
+          "kind": "design_capacity",
+          "capacity_m3s": 200,
+          "note": "Pumped canal, lifts ~200 m³/s about 130 m from the Amu Darya toward Bukhara."
+        },
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [65.50, 37.85],
+            [65.10, 38.55],
+            [64.42, 39.77]
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "name": "Karshi (Qarshi) Main Canal",
+          "kind": "design_capacity",
+          "capacity_m3s": 350,
+          "note": "Pumping-station cascade, total capacity 350 m³/s, lifts water 180 m from the Amu Darya to the Karshi Steppe."
+        },
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [65.55, 37.90],
+            [65.70, 38.30],
+            [65.80, 38.86]
+          ]
+        }
+      }
+    ]
+  },
+  "reservoirs": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "name": "Токтогульское водохранилище",
+          "river": "Нарын / Сырдарья",
+          "period": "вегетация 2025 (апр–сен)",
+          "inflow_km3": 9.12,
+          "inflow_plan_km3": 9.34,
+          "release_km3": 6.15
+        },
+        "geometry": { "type": "Point", "coordinates": [72.98, 41.68] }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "name": "Андижанское водохранилище",
+          "river": "Карадарья / Сырдарья",
+          "period": "вегетация 2025 (апр–сен)",
+          "inflow_km3": 1.93,
+          "inflow_plan_km3": 2.27,
+          "release_km3": 2.31
+        },
+        "geometry": { "type": "Point", "coordinates": [72.47, 40.91] }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "name": "Чарвакское водохранилище",
+          "river": "Чирчик / Сырдарья",
+          "period": "вегетация 2025 (апр–сен)",
+          "inflow_km3": 3.42,
+          "inflow_plan_km3": 4.80,
+          "release_km3": 3.11
+        },
+        "geometry": { "type": "Point", "coordinates": [70.03, 41.62] }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "name": "Водохранилище Бахри Точик (Кайраккум)",
+          "river": "Сырдарья",
+          "period": "вегетация 2025 (апр–сен)",
+          "inflow_km3": 5.74,
+          "inflow_plan_km3": 5.23,
+          "release_km3": 7.13
+        },
+        "geometry": { "type": "Point", "coordinates": [69.78, 40.27] }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "name": "Шардаринское водохранилище",
+          "river": "Сырдарья",
+          "period": "вегетация 2025 (апр–сен)",
+          "inflow_km3": 2.70,
+          "inflow_plan_km3": 3.69,
+          "release_km3": 4.29,
+          "note": "Забор в Кызылкумский канал + сброс в Арнасай учтены в release"
+        },
+        "geometry": { "type": "Point", "coordinates": [68.03, 41.08] }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "name": "Нурекское водохранилище",
+          "river": "Вахш / Амударья",
+          "period": "апрель–сентябрь 2025",
+          "inflow_km3": 17.22,
+          "release_km3": 13.57
+        },
+        "geometry": { "type": "Point", "coordinates": [69.33, 38.37] }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "name": "Тюямуюнский гидроузел (ТМГУ)",
+          "river": "Амударья",
+          "period": "апрель–сентябрь 2025",
+          "inflow_km3": 17.94,
+          "inflow_plan_km3": 17.87,
+          "release_km3": 15.35
+        },
+        "geometry": { "type": "Point", "coordinates": [61.03, 41.00] }
+      }
+    ]
+  },
+  "country_withdrawal": {
+    "period": "вегетация 2025 (апрель–сентябрь)",
+    "syrdarya": {
+      "limit_km3": 11.88,
+      "actual_km3": 9.30,
+      "by_country": { "Узбекистан": 7.01, "Таджикистан": 1.45, "Казахстан": 0.64, "Кыргызстан": 0.19 },
+      "delivery_to_aral_km3": 0.59
+    },
+    "amudarya": {
+      "limit_km3": 39.72,
+      "actual_km3": 34.20,
+      "by_country": { "Туркменистан": 14.2, "Узбекистан": 14.2, "Таджикистан": 5.8 },
+      "delivery_to_aral_km3": 0.99
+    }
+  }
+}
