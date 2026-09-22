@@ -194,6 +194,24 @@ export const LOCATIONS: LocationDef[] = [
     hasCanalData: true,
   },
   {
+    // Karkaralinsk (Qarqaraly) — granite mountain massif and pine-forest
+    // "island" rising out of the Kazakh Steppe near Karaganda, around the
+    // town of Karkaralinsk (49°24'N 75°28'E). Home to Karkaraly National
+    // Park: Komsomolsky Peak, Lake Bassein/Shaitan-Kol, relict pine stands.
+    slug: 'karkaralinsk',
+    label: 'Karkaralinsk',
+    center: { lat: 49.40, lon: 75.45 },
+    bounds: {
+      minLat: 49.25, maxLat: 49.55,
+      minLon: 75.20, maxLon: 75.70,
+    },
+    waterBounds: {
+      minLat: 49.05, maxLat: 49.75,
+      minLon: 74.95, maxLon: 75.95,
+    },
+    exaggeration: 30,
+  },
+  {
     // Barsakelmes solonchak — a ~70×40 km salt-marsh depression in
     // Karakalpakstan (Uzbekistan) at the foot of the Ustyurt Plateau, the
     // former bed of the prehistoric Tethys Sea. Not to be confused with the
@@ -202,16 +220,16 @@ export const LOCATIONS: LocationDef[] = [
     // near the viewpoint at 43.34467, 58.04557.
     slug: 'barsakelmes',
     label: 'Barsakelmes',
-    center: { lat: 43.35, lon: 58.05 },
+    center: { lat: 43.35, lon: 57.75 },
     bounds: {
       minLat: 43.00, maxLat: 43.70,
-      minLon: 57.55, maxLon: 58.55,
+      minLon: 56.80, maxLon: 58.55,
     },
     waterBounds: {
       minLat: 42.70, maxLat: 44.00,
-      minLon: 57.20, maxLon: 58.90,
+      minLon: 56.45, maxLon: 58.90,
     },
-    exaggeration: 30,
+    exaggeration: 10,
   },
   {
     // Garibaldi Provincial Park & Squamish — Coast Mountains, BC, Canada.

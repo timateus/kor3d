@@ -15,7 +15,7 @@ import IrrigationCanalsLayer, { type CanalFeature, type ReservoirFeature } from 
 import OsmPopulationLayer from '@/components/location/OsmPopulationLayer';
 import OsmPlacesLayer from '@/components/location/OsmPlacesLayer';
 import OsmLinesLayer from '@/components/location/OsmLinesLayer';
-import ResourcesLayer from '@/components/location/ResourcesLayer';
+import ResourcesLayer, { type ResourceFeature } from '@/components/location/ResourcesLayer';
 import OsmBuildingsLayer from '@/components/location/OsmBuildingsLayer';
 import InaturalistLayer, { type InatObservation } from '@/components/location/InaturalistLayer';
 import GlacierOutlineLayer, { type GlacierFeatureProps, type ThicknessInfo } from '@/components/location/GlacierOutlineLayer';
@@ -195,6 +195,15 @@ export default function LocationPage() {
   const { terrain, loading, error } = useMapterhornTerrain(location?.bounds ?? null, !!location);
 
   const [exaggeration, setExaggeration] = useState(location?.exaggeration ?? 50);
+  // Same class of bug as the basemap-defaults one above: this useState
+  // initializer only runs on first mount, but react-router reuses this
+  // component across slug changes — so exaggeration set on one location
+  // leaked into whichever location was visited next. Reset on location
+  // change instead of only seeding it once.
+  useEffect(() => {
+    setExaggeration(location?.exaggeration ?? 50);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location?.slug]);
   const [showInspector, setShowInspector] = useState(false);
   const [showTerrain, setShowTerrain] = useState(true);
   const [showWater, setShowWater] = useState(true);
@@ -211,6 +220,7 @@ export default function LocationPage() {
   const [showCanals, setShowCanals] = useState(!!location?.hasCanalData);
   const [selectedCanal, setSelectedCanal] = useState<CanalFeature | null>(null);
   const [selectedReservoir, setSelectedReservoir] = useState<ReservoirFeature | null>(null);
+  const [selectedResource, setSelectedResource] = useState<ResourceFeature | null>(null);
   const [showMassBalance, setShowMassBalance] = useState(false);
   const [showIceThickness, setShowIceThickness] = useState(!!location?.hasIceThickness);
   const [thicknessInfo, setThicknessInfo] = useState<ThicknessInfo | null>(null);
@@ -303,6 +313,7 @@ export default function LocationPage() {
     setSelectedGlacier(null);
     setSelectedCanal(null);
     setSelectedReservoir(null);
+    setSelectedResource(null);
     setSelectedInat(null);
     inatManualRef.current = false;
     setPopPoint(null);
@@ -778,6 +789,7 @@ export default function LocationPage() {
               clipBounds={location.waterBounds ?? location.bounds}
               enabled={showResources}
               dataUrl={`${dataBase}/resources.json`}
+              onSelect={(r) => { closeAllPopups(); setSelectedResource(r); }}
             />
             {/* Pipelines — reuses the generic line layer. */}
             <OsmLinesLayer
@@ -1262,6 +1274,22 @@ export default function LocationPage() {
           {selectedReservoir.note && (
             <div className="text-[10px] text-muted-foreground mt-2 leading-snug">{selectedReservoir.note}</div>
           )}
+        </div>
+      )}
+
+      {/* Resource extraction — mining/oil&gas/logging/industrial (OSM) */}
+      {selectedResource && (
+        <div className="absolute top-16 right-3 w-72 p-3 rounded-md bg-background/90 backdrop-blur border border-border/60 text-xs font-mono z-10">
+          <div className="flex items-center justify-between mb-2">
+            <span className="uppercase tracking-widest text-[10px] text-primary">{selectedResource.categoryLabel}</span>
+            <button onClick={() => setSelectedResource(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="text-sm font-sans font-semibold mb-1">{selectedResource.label}</div>
+          <div className="text-[10px] text-muted-foreground">
+            {selectedResource.kind === 'area' ? 'mapped area' : 'point feature'} · id {String(selectedResource.id)}
+          </div>
         </div>
       )}
 

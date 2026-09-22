@@ -1,9 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
+import { Line2 } from 'three/examples/jsm/lines/Line2.js';
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
+import { useThree } from '@react-three/fiber';
 import type { GeoBounds, TerrainData } from '@/lib/geotiff-loader';
 import { fetchOverpass } from '@/lib/overpass';
 
 type Category = 'mining' | 'oil_gas' | 'logging' | 'industrial';
+
+export interface ResourceFeature {
+  id: number | string;
+  category: Category;
+  categoryLabel: string;
+  label: string;
+  kind: 'point' | 'area';
+}
 
 interface ResourcePoint {
   id: number | string;
@@ -28,13 +40,14 @@ interface Props {
   enabled: boolean;
   /** Optional pre-baked static JSON (raw Overpass output) — tried first, avoids depending on flaky live Overpass mirrors. */
   dataUrl?: string;
+  onSelect?: (r: ResourceFeature | null) => void;
 }
 
 const CATEGORY_STYLE: Record<Category, { color: string; label: string }> = {
-  mining:     { color: '#c2410c', label: 'Mining' },
+  mining:     { color: '#f97316', label: 'Mining' },
   oil_gas:    { color: '#eab308', label: 'Oil & gas' },
-  logging:    { color: '#15803d', label: 'Logging' },
-  industrial: { color: '#64748b', label: 'Industrial' },
+  logging:    { color: '#22c55e', label: 'Logging' },
+  industrial: { color: '#94a3b8', label: 'Industrial' },
 };
 
 function categorize(tags: Record<string, string>): { category: Category; label: string } | null {
@@ -104,9 +117,33 @@ async function fetchResources(b: GeoBounds): Promise<{ points: ResourcePoint[]; 
   return parsed;
 }
 
-const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, dataUrl }: Props) => {
+// Soft radial-gradient disc (white core fading to transparent) — tinted per
+// category via the sprite material's color, so one shared texture covers
+// every category. Two sprites of this same texture, layered at different
+// scales/opacities, give a "beacon glow" instead of a hard map pin.
+let _glowTex: THREE.Texture | null = null;
+function glowTexture(): THREE.Texture {
+  if (_glowTex) return _glowTex;
+  const s = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = s;
+  const ctx = c.getContext('2d')!;
+  const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0.0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.35, 'rgba(255,255,255,0.85)');
+  g.addColorStop(0.7, 'rgba(255,255,255,0.22)');
+  g.addColorStop(1.0, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, s, s);
+  _glowTex = new THREE.CanvasTexture(c);
+  return _glowTex;
+}
+
+const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, dataUrl, onSelect }: Props) => {
   const [data, setData] = useState<{ points: ResourcePoint[]; areas: ResourceArea[] } | null>(null);
   const clip = clipBounds ?? bounds;
+  const { size } = useThree();
+  const tex = glowTexture();
 
   useEffect(() => {
     if (!enabled) return;
@@ -162,43 +199,97 @@ const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, da
   const polygons = useMemo(() => {
     if (!enabled || !data) return [];
     return data.areas.map((a) => {
-      const pts2d = a.coords.map(([lon, lat]) => new THREE.Vector2(...toXZ(lon, lat)));
+      // Shape() builds geometry in the local XY plane; the mesh below then
+      // rotates -90° about X to lay it flat, which maps local y → world -z.
+      // Negate z here so the fill ends up at world +z — matching the
+      // un-rotated outline below, which uses world (x, z) directly. Without
+      // this the two were mirrored across z=0 relative to each other, and
+      // the clickable fill mesh sat somewhere else entirely from what was
+      // drawn as its outline.
+      const pts2d = a.coords.map(([lon, lat]) => {
+        const [x, z] = toXZ(lon, lat);
+        return new THREE.Vector2(x, -z);
+      });
       const shape = new THREE.Shape(pts2d);
       const geo = new THREE.ShapeGeometry(shape);
       let sumLon = 0, sumLat = 0;
       for (const [lon, lat] of a.coords) { sumLon += lon; sumLat += lat; }
       const cy = toY(elevAt(sumLon / a.coords.length, sumLat / a.coords.length));
-      return { id: a.id, category: a.category, label: a.label, geo, y: cy };
+      const outlinePositions: number[] = [];
+      for (const [lon, lat] of a.coords) {
+        const [ox, oz] = toXZ(lon, lat);
+        outlinePositions.push(ox, cy + 0.004, oz);
+      }
+      const [fx, fz] = toXZ(a.coords[0][0], a.coords[0][1]);
+      outlinePositions.push(fx, cy + 0.004, fz);
+      const outlineGeom = new LineGeometry();
+      outlineGeom.setPositions(new Float32Array(outlinePositions));
+      const outlineMat = new LineMaterial({
+        color: new THREE.Color(CATEGORY_STYLE[a.category].color).getHex(),
+        linewidth: 1.6, transparent: true, opacity: 0.85, depthTest: true,
+        resolution: new THREE.Vector2(size.width, size.height),
+      });
+      return { id: a.id, category: a.category, label: a.label, geo, y: cy, outlineGeom, outlineMat };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, data, terrain, exaggeration, bounds]);
+  }, [enabled, data, terrain, exaggeration, bounds, size.width, size.height]);
 
-  useEffect(() => () => { for (const p of polygons) p.geo.dispose(); }, [polygons]);
+  useEffect(() => () => {
+    for (const p of polygons) { p.geo.dispose(); p.outlineGeom.dispose(); p.outlineMat.dispose(); }
+  }, [polygons]);
 
   if (!enabled) return null;
 
   return (
     <group>
       {polygons.map((p) => (
-        <mesh key={`area-${p.id}`} geometry={p.geo} position={[0, p.y, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <meshBasicMaterial
-            color={CATEGORY_STYLE[p.category].color}
-            transparent opacity={0.32} side={THREE.DoubleSide} depthWrite={false}
-            polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1}
-          />
-        </mesh>
+        <group key={`area-${p.id}`}>
+          <mesh
+            geometry={p.geo}
+            position={[0, p.y, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect?.({ id: p.id, category: p.category, categoryLabel: CATEGORY_STYLE[p.category].label, label: p.label, kind: 'area' });
+            }}
+            onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
+            onPointerOut={() => { document.body.style.cursor = ''; }}
+          >
+            <meshBasicMaterial
+              color={CATEGORY_STYLE[p.category].color}
+              transparent opacity={0.4} side={THREE.DoubleSide} depthWrite={false}
+              polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1}
+            />
+          </mesh>
+          <primitive object={new Line2(p.outlineGeom, p.outlineMat)} />
+        </group>
       ))}
       {markers.map((m) => {
         const s = CATEGORY_STYLE[m.category];
+        const color = new THREE.Color(s.color);
         return (
-          <group key={`pt-${m.id}`} position={m.pos}>
-            <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[0.02, 0.032, 20]} />
-              <meshBasicMaterial color={s.color} transparent opacity={0.5} depthWrite={false} />
-            </mesh>
-            <mesh position={[0, 0.045, 0]}>
-              <sphereGeometry args={[0.016, 10, 10]} />
-              <meshStandardMaterial color={s.color} emissive={s.color} emissiveIntensity={0.7} />
+          <group
+            key={`pt-${m.id}`}
+            position={m.pos}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect?.({ id: m.id, category: m.category, categoryLabel: s.label, label: m.label, kind: 'point' });
+            }}
+            onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
+            onPointerOut={() => { document.body.style.cursor = ''; }}
+          >
+            {/* outer soft halo */}
+            <sprite scale={[0.16, 0.16, 1]}>
+              <spriteMaterial map={tex} color={color} transparent opacity={0.55} depthWrite={false} sizeAttenuation />
+            </sprite>
+            {/* bright core */}
+            <sprite position={[0, 0.001, 0]} scale={[0.07, 0.07, 1]}>
+              <spriteMaterial map={tex} color={color} transparent opacity={0.95} depthWrite={false} sizeAttenuation />
+            </sprite>
+            {/* invisible larger hit-target so the glow is easy to click */}
+            <mesh visible={false}>
+              <sphereGeometry args={[0.06, 8, 8]} />
+              <meshBasicMaterial transparent opacity={0} />
             </mesh>
           </group>
         );
