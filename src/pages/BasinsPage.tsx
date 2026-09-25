@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RotateCcw } from 'lucide-react';
 
 /**
  * Central Asia river/lake basins — population by HydroBASINS sub-basin
@@ -16,6 +16,14 @@ import { ArrowLeft } from 'lucide-react';
  * dependency. Rivers are merged into one path per Strahler-order bucket
  * (not one path per reach) — thousands of separate <path> elements is what
  * made the first version of this map laggy to pan/zoom.
+ *
+ * Two color modes: 'basin' (golden-angle categorical hue per shape — good
+ * for telling basins apart, useless for comparing magnitude) and 'density'
+ * (sequential scale in the app's own accent hue, with a legend — answers
+ * "where is it denser" at a glance, which categorical color structurally
+ * cannot). A design critique flagged shipping only the categorical mode as
+ * answering the wrong question for population data; both are kept and the
+ * viewer picks.
  */
 
 const D3_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js';
@@ -32,15 +40,21 @@ function loadD3(): Promise<any> {
     const existing = document.querySelector(`script[src="${D3_CDN}"]`);
     if (existing) {
       existing.addEventListener('load', () => resolve(window.d3));
-      existing.addEventListener('error', reject);
+      existing.addEventListener('error', () => reject(new Error('D3 (cdnjs)')));
       return;
     }
     const s = document.createElement('script');
     s.src = D3_CDN;
     s.onload = () => resolve(window.d3);
-    s.onerror = reject;
+    s.onerror = () => reject(new Error('D3 (cdnjs)'));
     document.head.appendChild(s);
   });
+}
+
+async function fetchJson(url: string, label: string): Promise<any> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(label);
+  return res.json();
 }
 
 const BASIN_NAMES_MAIN: Record<number, string> = {
@@ -114,37 +128,55 @@ function categoryColor(i: number) {
   return `hsl(${hue.toFixed(1)}, 70%, 53%)`;
 }
 
+// Sequential ramp in the app's own accent hue (--primary: 190 70% 50% in
+// index.css) rather than a generic d3 built-in — ties the density view back
+// to kor3d's own palette instead of an arbitrary import.
+const DENSITY_LOW = 'hsl(190, 35%, 92%)';
+const DENSITY_HIGH = 'hsl(190, 78%, 22%)';
+
 const dataBase = `${import.meta.env.BASE_URL}data/basins`;
+
+type ColorMode = 'basin' | 'density';
+type LevelKey = 'main' | 'lvl3';
 
 export default function BasinsPage() {
   const svgRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [retryTick, setRetryTick] = useState(0);
   const [stats, setStats] = useState({ n: 0, pop: '—', area: '—' });
-  const loadLevelRef = useRef<(key: 'main' | 'lvl3') => void>();
-  const [level, setLevel] = useState<'main' | 'lvl3'>('main');
+  const [level, setLevel] = useState<LevelKey>('main');
+  const [colorMode, setColorMode] = useState<ColorMode>('basin');
+  const [maxDensity, setMaxDensity] = useState(0);
+  const loadLevelRef = useRef<(key: LevelKey) => void>();
+  const setColorModeRef = useRef<(mode: ColorMode) => void>();
+  const resetViewRef = useRef<() => void>();
 
   useEffect(() => {
     let cancelled = false;
-    let cleanupZoom: (() => void) | undefined;
+    let cleanup: (() => void) | undefined;
 
     (async () => {
+      setStatus('loading');
+      setErrorDetail(null);
       try {
         const [d3, basinsMain, basinsLvl3, countries, rivers] = await Promise.all([
           loadD3(),
-          fetch(`${dataBase}/basins_main.json`).then((r) => r.json()),
-          fetch(`${dataBase}/basins_lvl3.json`).then((r) => r.json()),
-          fetch(`${dataBase}/countries.json`).then((r) => r.json()),
-          fetch(`${dataBase}/rivers.json`).then((r) => r.json()),
+          fetchJson(`${dataBase}/basins_main.json`, 'данные по бассейнам (речные системы)'),
+          fetchJson(`${dataBase}/basins_lvl3.json`, 'данные по бассейнам (крупные)'),
+          fetchJson(`${dataBase}/countries.json`, 'границы стран'),
+          fetchJson(`${dataBase}/rivers.json`, 'реки'),
         ]);
         if (cancelled || !svgRef.current || !tooltipRef.current) return;
 
-        const LEVELS: Record<string, { data: any; names: Record<number, string> }> = {
+        const LEVELS: Record<LevelKey, { data: any; names: Record<number, string> }> = {
           main: { data: basinsMain, names: BASIN_NAMES_MAIN },
           lvl3: { data: basinsLvl3, names: BASIN_NAMES_LVL3 },
         };
 
         const svg = d3.select(svgRef.current);
+        svg.selectAll('*').remove();
         const g = svg.append('g');
         const gBasins = g.append('g');
         const gRivers = g.append('g');
@@ -156,11 +188,22 @@ export default function BasinsPage() {
         const tooltip = d3.select(tooltipRef.current);
         const fmtPop = (n: number) => d3.format(',.0f')(n).replace(/,/g, ' ');
         let pinned: any = null;
-        let levelKey: 'main' | 'lvl3' = 'main';
+        let levelKey: LevelKey = 'main';
+        let mode: ColorMode = 'basin';
         let feats: any[] = [];
+        let maxDens = 1;
 
         function basinName(mainBas: number) {
           return LEVELS[levelKey].names[mainBas] || 'Малый бессточный бассейн';
+        }
+
+        function densityColor(d: number) {
+          const t = Math.log1p(d) / Math.log1p(maxDens || 1);
+          return d3.interpolateHsl(DENSITY_LOW, DENSITY_HIGH)(Math.max(0, Math.min(1, t)));
+        }
+
+        function colorFor(i: number, p: any) {
+          return mode === 'basin' ? categoryColor(i) : densityColor(p.density_km2);
         }
 
         function fit() {
@@ -202,13 +245,25 @@ export default function BasinsPage() {
           d3.select(el).classed('selected', true);
         }
 
+        function activate(event: any, el: any, d: any) {
+          if (pinned === el) { clearTooltip(); return; }
+          pinned = el;
+          showTooltip(event, el, d);
+        }
+
         function renderBasins() {
           gBasins.selectAll('path')
             .data(feats)
             .join('path')
             .attr('class', 'bp-basin')
             .attr('d', path)
-            .attr('fill', (_d: any, i: number) => categoryColor(i))
+            .attr('fill', (d: any, i: number) => colorFor(i, d.properties))
+            .attr('tabindex', 0)
+            .attr('role', 'button')
+            .attr('aria-label', (d: any) => {
+              const p = d.properties;
+              return `${basinName(p.main_bas)}: население ${fmtPop(p.population)}, площадь ${fmtPop(p.area_km2)} км², плотность ${p.density_km2.toFixed(2)} человек на км²`;
+            })
             .on('mousemove', function (this: any, event: any, d: any) {
               if (pinned) return;
               showTooltip(event, this, d);
@@ -220,9 +275,22 @@ export default function BasinsPage() {
             })
             .on('click', function (this: any, event: any, d: any) {
               event.stopPropagation();
-              if (pinned === this) { clearTooltip(); return; }
-              pinned = this;
+              activate(event, this, d);
+            })
+            .on('focus', function (this: any, event: any, d: any) {
               showTooltip(event, this, d);
+            })
+            .on('blur', function (this: any) {
+              if (pinned !== this) {
+                tooltip.style('opacity', 0).style('transform', 'translate(-9999px,-9999px)');
+                d3.select(this).classed('selected', false);
+              }
+            })
+            .on('keydown', function (this: any, event: any, d: any) {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                activate(event, this, d);
+              }
             });
         }
 
@@ -265,11 +333,17 @@ export default function BasinsPage() {
           gCities.selectAll('.bp-city-label').attr('stroke-width', 3 / event.transform.k);
         });
         svg.call(zoom);
-        cleanupZoom = () => svg.on('.zoom', null);
 
-        function loadLevel(key: 'main' | 'lvl3') {
+        function resetView() {
+          svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity);
+        }
+        resetViewRef.current = resetView;
+
+        function loadLevel(key: LevelKey) {
           levelKey = key;
           feats = LEVELS[key].data.features.filter((f: any) => f.geometry);
+          maxDens = d3.max(feats, (f: any) => f.properties.density_km2) || 1;
+          setMaxDensity(maxDens);
           const totalPop = d3.sum(feats, (f: any) => f.properties.population);
           const totalArea = d3.sum(feats, (f: any) => f.properties.area_km2);
           setStats({
@@ -282,32 +356,54 @@ export default function BasinsPage() {
         }
         loadLevelRef.current = loadLevel;
 
+        function applyColorMode(m: ColorMode) {
+          mode = m;
+          gBasins.selectAll('path').attr('fill', (d: any, i: number) => colorFor(i, d.properties));
+        }
+        setColorModeRef.current = applyColorMode;
+
         window.addEventListener('resize', fit);
         fit();
         loadLevel('main');
         setStatus('ready');
 
-        cleanupZoom = () => {
+        cleanup = () => {
           window.removeEventListener('resize', fit);
           svg.on('.zoom', null);
         };
-      } catch (e) {
+      } catch (e: any) {
         console.error('BasinsPage failed to load', e);
-        if (!cancelled) setStatus('error');
+        if (!cancelled) {
+          setErrorDetail(e?.message || 'неизвестный источник');
+          setStatus('error');
+        }
       }
     })();
 
     return () => {
       cancelled = true;
-      cleanupZoom?.();
+      cleanup?.();
     };
+  }, [retryTick]);
+
+  // Escape resets the view — the only other way back once zoomed/panned is
+  // otherwise a full page reload, which was the P0 this restores.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') resetViewRef.current?.();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  const densityMax = maxDensity > 0 ? maxDensity.toFixed(0) : '—';
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground overflow-hidden">
       <style>{`
-        .bp-basin{ stroke:hsl(220 20% 8%); stroke-width:0.9; vector-effect:non-scaling-stroke; }
+        .bp-basin{ stroke:hsl(220 20% 8%); stroke-width:0.9; vector-effect:non-scaling-stroke; cursor:pointer; }
         .bp-basin:hover{ filter:brightness(1.1); }
+        .bp-basin:focus-visible{ outline:none; stroke:hsl(190 78% 60%); stroke-width:2.5; }
         .bp-basin.selected{ stroke:#fff; stroke-width:2.2; }
         .bp-river{ fill:none; stroke:#bfe6f2; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; pointer-events:none; opacity:0.85; }
         .bp-country-border{ fill:none; stroke:#fff; stroke-width:1.3; stroke-dasharray:4 2; opacity:0.4; vector-effect:non-scaling-stroke; pointer-events:none; }
@@ -319,32 +415,33 @@ export default function BasinsPage() {
         .bp-row b{ color:hsl(210 20% 90%); font-variant-numeric:tabular-nums; font-weight:500; }
       `}</style>
 
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-4">
+      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-4 py-3 sm:px-6 sm:py-4">
         <div className="max-w-xl">
-          <Link to="/" className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+          <Link to="/" className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground sm:mb-2">
             <ArrowLeft className="h-3 w-3" /> назад
           </Link>
-          <h1 className="text-xl font-semibold tracking-tight">Бассейны Центральной Азии</h1>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Бассейны Центральной Азии</h1>
+          <p className="mt-1 hidden text-xs text-muted-foreground sm:block">
             Речные и озёрные бассейны Казахстана, Узбекистана, Туркменистана, Таджикистана и Киргизии —
-            HydroBASINS (Lehner &amp; Grill, 2013), население GHS-POP R2023A. Каждый бассейн — свой цвет.
+            HydroBASINS (Lehner &amp; Grill, 2013), население GHS-POP R2023A.
           </p>
         </div>
-        <div className="flex gap-6 text-right font-mono text-sm tabular-nums">
-          <div><div className="text-lg">{stats.n || '—'}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">бассейнов</div></div>
-          <div><div className="text-lg">{stats.pop}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">население</div></div>
-          <div><div className="text-lg">{stats.area}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">км²</div></div>
+        <div className="flex gap-4 text-right font-mono text-xs tabular-nums sm:gap-6 sm:text-sm">
+          <div><div className="text-base sm:text-lg">{stats.n || '—'}</div><div className="text-[9px] uppercase tracking-wide text-muted-foreground sm:text-[10px]">бассейнов</div></div>
+          <div><div className="text-base sm:text-lg">{stats.pop}</div><div className="text-[9px] uppercase tracking-wide text-muted-foreground sm:text-[10px]">население</div></div>
+          <div><div className="text-base sm:text-lg">{stats.area}</div><div className="text-[9px] uppercase tracking-wide text-muted-foreground sm:text-[10px]">км²</div></div>
         </div>
       </header>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-6 py-2">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border bg-card px-4 py-2 sm:gap-4 sm:px-6">
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] uppercase tracking-wide text-muted-foreground">Уровень бассейнов</label>
+          <label htmlFor="basins-level" className="text-[10px] uppercase tracking-wide text-muted-foreground">Уровень бассейнов</label>
           <select
+            id="basins-level"
             className="rounded-md border border-border bg-background px-2 py-1.5 text-sm"
             value={level}
             onChange={(e) => {
-              const v = e.target.value as 'main' | 'lvl3';
+              const v = e.target.value as LevelKey;
               setLevel(v);
               loadLevelRef.current?.(v);
             }}
@@ -353,26 +450,80 @@ export default function BasinsPage() {
             <option value="main">По речным системам (112)</option>
           </select>
         </div>
-        <div className="text-xs text-muted-foreground">
-          цвет = отдельный бассейн · население и плотность — по клику
+
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Цвет</span>
+          <div className="inline-flex rounded-md border border-border bg-background p-0.5" role="group" aria-label="Режим окраски">
+            {(['basin', 'density'] as ColorMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => {
+                  setColorMode(m);
+                  setColorModeRef.current?.(m);
+                }}
+                className={`rounded px-2 py-1 text-xs transition-colors ${colorMode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                aria-pressed={colorMode === m}
+              >
+                {m === 'basin' ? 'По бассейнам' : 'По плотности'}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {colorMode === 'density' && (
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">чел/км² (нелин. шкала)</span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] text-muted-foreground">0</span>
+              <div className="h-2.5 w-24 rounded-full" style={{ background: `linear-gradient(to right, ${DENSITY_LOW}, ${DENSITY_HIGH})` }} />
+              <span className="font-mono text-[10px] text-muted-foreground">{densityMax}</span>
+            </div>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => resetViewRef.current?.()}
+          className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+          title="Сбросить вид (Esc)"
+        >
+          <RotateCcw className="h-3 w-3" /> Сбросить вид
+        </button>
       </div>
 
       <main className="relative min-h-0 flex-1">
         {status === 'loading' && (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-            Загрузка карты…
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
+              Загрузка карты…
+            </div>
           </div>
         )}
         {status === 'error' && (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-destructive">
-            Не удалось загрузить карту бассейнов.
+          <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-destructive">
+            <div className="flex flex-col items-center gap-3">
+              <p>Не удалось загрузить карту бассейнов{errorDetail ? ` — источник: ${errorDetail}` : ''}.</p>
+              <button
+                type="button"
+                onClick={() => setRetryTick((t) => t + 1)}
+                className="rounded-md border border-destructive/40 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10"
+              >
+                Повторить
+              </button>
+            </div>
           </div>
         )}
-        <svg ref={svgRef} className="h-full w-full cursor-grab active:cursor-grabbing" />
-        <div ref={tooltipRef} className="bp-tooltip" />
-        <div className="absolute bottom-3 left-3 rounded-md bg-background/80 px-2 py-1 text-[10.5px] text-muted-foreground">
-          HydroBASINS v1c · HydroRIVERS v1.0 · GHS-POP R2023A (JRC) · наведите или кликните на бассейн
+        <svg
+          ref={svgRef}
+          className="h-full w-full cursor-grab active:cursor-grabbing"
+          role="group"
+          aria-label="Интерактивная карта бассейнов Центральной Азии — фокусируйтесь клавишей Tab, выбирайте Enter или пробелом"
+        />
+        <div ref={tooltipRef} className="bp-tooltip" role="status" aria-live="polite" />
+        <div className="absolute bottom-3 left-3 hidden rounded-md bg-background/80 px-2 py-1 text-[10.5px] text-muted-foreground sm:block">
+          HydroBASINS v1c · HydroRIVERS v1.0 · GHS-POP R2023A (JRC) · наведите, кликните или сфокусируйте Tab на бассейн
         </div>
       </main>
     </div>
