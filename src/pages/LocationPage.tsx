@@ -672,9 +672,15 @@ export default function LocationPage() {
                 }
                 if (showPopulation && popGrid) {
                   const c = uvToCoord(e.uv, terrain, location.bounds);
-                  closeAllPopups();
-                  setPopPoint({ lat: c.lat, lon: c.lon, value: sampleGrid(popGrid, c.lon, c.lat) });
-                  return;
+                  const value = sampleGrid(popGrid, c.lon, c.lat);
+                  // Only pop up where there's actually someone — clicking
+                  // empty desert/mountainside shouldn't surface a "0.0
+                  // people" card, it should behave like a plain ground click.
+                  if (value != null && value > 0) {
+                    closeAllPopups();
+                    setPopPoint({ lat: c.lat, lon: c.lon, value });
+                    return;
+                  }
                 }
                 // Plain click on open terrain, hitting no feature above (those
                 // stop propagation themselves) — treat as click-away and
@@ -933,38 +939,48 @@ export default function LocationPage() {
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="grid gap-2 p-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
             {inatObs.filter((o) => o.photoUrl).map((o) => (
               <button
                 key={o.id}
                 onClick={() => flyToObservation(o)}
-                className="group relative aspect-square rounded-md overflow-hidden border border-border/60 hover:border-primary transition-colors"
+                className="group relative aspect-square text-left overflow-hidden"
                 title={`${o.commonName ?? o.species ?? 'Observation'} — click to fly there`}
               >
+                {/* Same bloom treatment as the popup: blurred glow copy underneath,
+                    the sharp image laid over it with reduced opacity in 'lighten'
+                    blend so it reads as luminous/translucent rather than a flat photo. */}
+                <img
+                  src={o.photoUrl ?? ''}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 w-full h-full object-cover scale-110"
+                  style={{ filter: 'blur(16px) saturate(1.6) brightness(1.4)', opacity: 0.75, mixBlendMode: 'screen' }}
+                />
                 <img
                   src={o.photoUrl ?? ''}
                   alt={o.commonName ?? o.species ?? 'iNaturalist observation'}
                   loading="lazy"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                  style={{ filter: 'contrast(1.2) saturate(1.3) brightness(1.05)' }}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  style={{ filter: 'contrast(1.25) saturate(1.35) brightness(1.1)', mixBlendMode: 'lighten', opacity: 0.82 }}
                 />
-                {/* Warm bloom wash, same hue as the popup's highlight layer */}
+                {/* Warm bloom highlight, same as the popup's */}
                 <div
                   className="absolute inset-0 pointer-events-none"
                   style={{
-                    background: 'radial-gradient(ellipse at 40% 30%, rgba(255,240,200,0.25), transparent 65%)',
+                    background: 'radial-gradient(ellipse at 40% 30%, rgba(255,240,200,0.35), transparent 60%)',
                     mixBlendMode: 'screen',
                   }}
                 />
+                {/* Text overlaid directly on the image, like the popup's caption block. */}
                 <div
-                  className="absolute inset-x-0 bottom-0 px-1.5 py-1"
+                  className="absolute inset-x-0 bottom-0 p-1.5"
                   style={{
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)',
-                    textShadow: '0 0 2px rgba(255,255,255,0.5), 0 1px 6px rgba(0,0,0,0.7)',
+                    textShadow: '0 0 2px rgba(255,255,255,0.9), 0 0 10px rgba(255,255,255,0.55), 0 0 22px rgba(255,220,140,0.35), 0 1px 12px rgba(0,0,0,0.55)',
                   }}
                 >
                   <div className="uppercase tracking-[0.2em] text-[8px] tech-font" style={{ color: '#ffe08a' }}>
-                    {o.iconicTaxon ?? 'Life'}
+                    {o.iconicTaxon ?? 'Life'} · #{o.id}
                   </div>
                   <div className="text-[11px] font-medium leading-tight truncate" style={{ color: '#fffdf3' }}>
                     {o.commonName ?? o.species ?? 'Observation'}
