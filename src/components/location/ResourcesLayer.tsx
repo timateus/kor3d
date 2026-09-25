@@ -14,15 +14,20 @@ export interface ResourceFeature {
   category: Category;
   categoryLabel: string;
   label: string;
+  /** Specific OSM-tag-derived kind (e.g. "coal mine", "Petroleum well", "Pipeline substation") — independent of `label`, which prefers the site's own name when it has one. */
+  subtype: string;
   kind: 'point' | 'area';
   lat: number;
   lon: number;
+  /** Static satellite thumbnail centered on the feature — preloadable/cacheable, unlike a live map embed. */
+  imageUrl: string;
 }
 
 interface ResourcePoint {
   id: number | string;
   category: Category;
   label: string;
+  subtype: string;
   lon: number;
   lat: number;
 }
@@ -31,7 +36,19 @@ interface ResourceArea {
   id: number | string;
   category: Category;
   label: string;
+  subtype: string;
   coords: [number, number][];
+}
+
+/** Free, tokenless satellite export — ArcGIS World Imagery. Returns a plain
+ * raster URL (unlike a Google Maps embed iframe), so it can be preloaded
+ * with a plain `new Image()` and have CSS filters/blend-modes applied to it. */
+export function resourceSatelliteUrl(lat: number, lon: number): string {
+  const halfKm = 0.35;
+  const latDelta = halfKm / 111;
+  const lonDelta = halfKm / (111 * Math.cos((lat * Math.PI) / 180));
+  const bbox = [lon - lonDelta, lat - latDelta, lon + lonDelta, lat + latDelta].join(',');
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&imageSR=4326&size=480,480&format=jpg&f=image`;
 }
 
 interface Props {
@@ -54,18 +71,26 @@ const CATEGORY_STYLE: Record<Category, { color: string; label: string }> = {
   industrial: { color: '#94a3b8', label: 'Industrial' },
 };
 
-function categorize(tags: Record<string, string>): { category: Category; label: string } | null {
+function categorize(tags: Record<string, string>): { category: Category; label: string; subtype: string } | null {
   if (tags.landuse === 'quarry' || tags.man_made === 'mine' || tags.industrial === 'mine' || tags.resource) {
-    return { category: 'mining', label: tags.resource ? `${tags.resource} mine` : (tags.name ?? 'Mine / quarry') };
+    const subtype = tags.resource ? `${tags.resource} mine` : tags.landuse === 'quarry' ? 'Quarry' : 'Mine';
+    return { category: 'mining', label: tags.name ?? subtype, subtype };
   }
   if (tags.man_made === 'petroleum_well' || tags.pipeline === 'substation' || tags.industrial === 'oil' || tags.industrial === 'gas' || tags.man_made === 'pipeline') {
-    return { category: 'oil_gas', label: tags.name ?? (tags.man_made === 'petroleum_well' ? 'Well' : tags.pipeline === 'substation' ? 'Pipeline substation' : 'Oil/gas facility') };
+    const subtype =
+      tags.man_made === 'petroleum_well' ? 'Petroleum well'
+      : tags.pipeline === 'substation' ? 'Pipeline substation'
+      : tags.man_made === 'pipeline' ? 'Pipeline'
+      : tags.industrial === 'oil' ? 'Oil facility'
+      : tags.industrial === 'gas' ? 'Gas facility'
+      : 'Oil/gas facility';
+    return { category: 'oil_gas', label: tags.name ?? subtype, subtype };
   }
   if (tags.landuse === 'forestry') {
-    return { category: 'logging', label: tags.name ?? 'Forestry' };
+    return { category: 'logging', label: tags.name ?? 'Forestry', subtype: 'Forestry' };
   }
   if (tags.landuse === 'industrial') {
-    return { category: 'industrial', label: tags.name ?? 'Industrial area' };
+    return { category: 'industrial', label: tags.name ?? 'Industrial area', subtype: 'Industrial area' };
   }
   return null;
 }
@@ -77,10 +102,10 @@ function parseElements(data: any): { points: ResourcePoint[]; areas: ResourceAre
     const cat = categorize(el.tags || {});
     if (!cat) continue;
     if (el.type === 'node' && typeof el.lon === 'number' && typeof el.lat === 'number') {
-      points.push({ id: el.id, category: cat.category, label: cat.label, lon: el.lon, lat: el.lat });
+      points.push({ id: el.id, category: cat.category, label: cat.label, subtype: cat.subtype, lon: el.lon, lat: el.lat });
     } else if (el.type === 'way' && Array.isArray(el.geometry) && el.geometry.length >= 3) {
       const coords = el.geometry.map((g: any) => [g.lon, g.lat] as [number, number]);
-      areas.push({ id: el.id, category: cat.category, label: cat.label, coords });
+      areas.push({ id: el.id, category: cat.category, label: cat.label, subtype: cat.subtype, coords });
     }
   }
   return { points, areas };
@@ -155,14 +180,17 @@ const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, da
     const features: ResourceFeature[] = [
       ...data.points.map((p): ResourceFeature => ({
         id: p.id, category: p.category, categoryLabel: CATEGORY_STYLE[p.category].label,
-        label: p.label, kind: 'point', lat: p.lat, lon: p.lon,
+        label: p.label, subtype: p.subtype, kind: 'point', lat: p.lat, lon: p.lon,
+        imageUrl: resourceSatelliteUrl(p.lat, p.lon),
       })),
       ...data.areas.map((a): ResourceFeature => {
         let sumLon = 0, sumLat = 0;
         for (const [lon, lat] of a.coords) { sumLon += lon; sumLat += lat; }
+        const lat = sumLat / a.coords.length, lon = sumLon / a.coords.length;
         return {
           id: a.id, category: a.category, categoryLabel: CATEGORY_STYLE[a.category].label,
-          label: a.label, kind: 'area', lat: sumLat / a.coords.length, lon: sumLon / a.coords.length,
+          label: a.label, subtype: a.subtype, kind: 'area', lat, lon,
+          imageUrl: resourceSatelliteUrl(lat, lon),
         };
       }),
     ];
@@ -256,7 +284,7 @@ const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, da
         resolution: new THREE.Vector2(size.width, size.height),
       });
       return {
-        id: a.id, category: a.category, label: a.label, geo, y: cy, outlineGeom, outlineMat,
+        id: a.id, category: a.category, label: a.label, subtype: a.subtype, geo, y: cy, outlineGeom, outlineMat,
         lat: sumLat / a.coords.length, lon: sumLon / a.coords.length,
       };
     });
@@ -279,7 +307,7 @@ const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, da
             rotation={[-Math.PI / 2, 0, 0]}
             onClick={(e) => {
               e.stopPropagation();
-              onSelect?.({ id: p.id, category: p.category, categoryLabel: CATEGORY_STYLE[p.category].label, label: p.label, kind: 'area', lat: p.lat, lon: p.lon });
+              onSelect?.({ id: p.id, category: p.category, categoryLabel: CATEGORY_STYLE[p.category].label, label: p.label, subtype: p.subtype, kind: 'area', lat: p.lat, lon: p.lon, imageUrl: resourceSatelliteUrl(p.lat, p.lon) });
             }}
             onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
             onPointerOut={() => { document.body.style.cursor = ''; }}
@@ -302,7 +330,7 @@ const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, da
             position={m.pos}
             onClick={(e) => {
               e.stopPropagation();
-              onSelect?.({ id: m.id, category: m.category, categoryLabel: s.label, label: m.label, kind: 'point', lat: m.lat, lon: m.lon });
+              onSelect?.({ id: m.id, category: m.category, categoryLabel: s.label, label: m.label, subtype: m.subtype, kind: 'point', lat: m.lat, lon: m.lon, imageUrl: resourceSatelliteUrl(m.lat, m.lon) });
             }}
             onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
             onPointerOut={() => { document.body.style.cursor = ''; }}

@@ -505,6 +505,24 @@ export default function LocationPage() {
     step();
   }, [inatObs]);
 
+  // Preload resource satellite thumbnails the same way, so the carousel/
+  // manual clicks don't sit on a blank card while the image fetches.
+  useEffect(() => {
+    if (resourceObs.length === 0) return;
+    const urls = resourceObs.map((r) => r.imageUrl).filter(Boolean);
+    let i = 0;
+    const step = () => {
+      if (i >= urls.length) return;
+      const batch = urls.slice(i, i + 6);
+      i += 6;
+      Promise.all(batch.map((u) => new Promise<void>((res) => {
+        const img = new Image();
+        img.onload = img.onerror = () => res();
+        img.src = u;
+      }))).then(step);
+    };
+    step();
+  }, [resourceObs]);
 
   const addKeyframe = () => {
     const cam = cameraRef.current;
@@ -1472,37 +1490,100 @@ export default function LocationPage() {
         </div>
       )}
 
-      {/* Resource extraction — mining/oil&gas/logging/industrial (OSM) */}
+      {/* Resource extraction — mining/oil&gas/logging/industrial (OSM).
+          Same bloom-glow treatment + z-[90] as the iNat popup (see its
+          comment above) so the two are visually consistent as the ambient
+          carousel swaps between them, and so OsmPlacesLayer's <Html> labels
+          don't punch through this corner either. */}
       {selectedResource && (
-        <div className="absolute top-16 right-3 w-72 p-3 rounded-md bg-background/90 backdrop-blur border border-border/60 text-xs font-mono z-10">
-          <div className="flex items-center justify-between mb-2">
-            <span className="uppercase tracking-widest text-[10px] text-primary">{selectedResource.categoryLabel}</span>
-            <button onClick={() => selectResource(null, true)} className="text-muted-foreground hover:text-foreground">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="text-sm font-sans font-semibold mb-1">{selectedResource.label}</div>
-          <div className="text-[10px] text-muted-foreground mb-2">
-            {selectedResource.kind === 'area' ? 'mapped area' : 'point feature'} · id {String(selectedResource.id)}
-          </div>
-          <div className="rounded overflow-hidden border border-border/60">
-            <iframe
+        <div className="absolute top-16 right-3 w-80 text-xs z-[90] pointer-events-none">
+          <div className="pointer-events-auto">
+            <div
               key={`${selectedResource.kind}-${selectedResource.id}`}
-              title="Satellite view"
-              className="w-full h-40 block"
-              style={{ border: 0 }}
-              loading="lazy"
-              src={`https://maps.google.com/maps?q=${selectedResource.lat},${selectedResource.lon}&t=k&z=16&output=embed`}
-            />
+              className="relative w-full h-52 overflow-hidden animate-fade-in"
+              style={{ transition: 'opacity 600ms ease-out' }}
+            >
+              <img
+                src={selectedResource.imageUrl}
+                alt=""
+                aria-hidden
+                className="absolute inset-0 w-full h-full object-cover scale-110"
+                style={{ filter: 'blur(24px) saturate(1.6) brightness(1.4)', opacity: 0.75, mixBlendMode: 'screen' }}
+              />
+              <img
+                src={selectedResource.imageUrl}
+                alt={`Satellite view of ${selectedResource.label}`}
+                className="relative w-full h-full object-cover"
+                style={{
+                  filter: 'contrast(1.25) saturate(1.35) brightness(1.1)',
+                  mixBlendMode: 'lighten',
+                  opacity: 0.78,
+                  maskImage: 'radial-gradient(ellipse at center, black 55%, transparent 95%)',
+                  WebkitMaskImage: 'radial-gradient(ellipse at center, black 55%, transparent 95%)',
+                }}
+                loading="lazy"
+              />
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  backgroundImage:
+                    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+                  mixBlendMode: 'overlay',
+                  opacity: 0.85,
+                }}
+              />
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: 'radial-gradient(ellipse at 40% 30%, rgba(255,240,200,0.35), transparent 60%)',
+                  mixBlendMode: 'screen',
+                }}
+              />
+              <button
+                onClick={() => selectResource(null, true)}
+                className="absolute top-2 right-2 p-1 rounded bg-background/60 backdrop-blur text-foreground hover:bg-background/90"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div
+              className="pt-2 pl-1"
+              style={{
+                textShadow:
+                  '0 0 2px rgba(255,255,255,0.9), 0 0 10px rgba(255,255,255,0.55), 0 0 22px rgba(255,220,140,0.35), 0 1px 12px rgba(0,0,0,0.55)',
+              }}
+            >
+              <div className="uppercase tracking-[0.25em] text-[10px] tech-font" style={{ color: '#ffe08a' }}>
+                {selectedResource.categoryLabel} · {selectedResource.subtype}
+              </div>
+              <div className="display-font text-2xl leading-tight mt-1" style={{ color: '#fffdf3' }}>
+                {selectedResource.label}
+              </div>
+              <div className="mt-2 tech-font text-[10px] space-y-0.5" style={{ color: '#eae5d3' }}>
+                <div>{selectedResource.kind === 'area' ? 'mapped area' : 'point feature'} · id {String(selectedResource.id)}</div>
+                <div>{selectedResource.lat.toFixed(5)}, {selectedResource.lon.toFixed(5)}</div>
+              </div>
+              <div className="mt-2 flex gap-3">
+                <a
+                  className="inline-block hover:underline text-[11px] tech-font"
+                  style={{ color: '#ffe08a' }}
+                  href={`https://www.openstreetmap.org/${selectedResource.kind === 'area' ? 'way' : 'node'}/${selectedResource.id}`}
+                  target="_blank" rel="noreferrer"
+                >
+                  view on OSM →
+                </a>
+                <a
+                  className="inline-block hover:underline text-[11px] tech-font"
+                  style={{ color: '#ffe08a' }}
+                  href={`https://www.google.com/maps/search/?api=1&query=${selectedResource.lat},${selectedResource.lon}`}
+                  target="_blank" rel="noreferrer"
+                >
+                  open in Google Maps →
+                </a>
+              </div>
+            </div>
           </div>
-          <a
-            href={`https://www.google.com/maps/search/?api=1&query=${selectedResource.lat},${selectedResource.lon}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-[10px] text-muted-foreground hover:text-foreground mt-1 text-right"
-          >
-            open in Google Maps ↗
-          </a>
         </div>
       )}
 
