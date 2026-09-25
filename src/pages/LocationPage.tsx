@@ -911,84 +911,69 @@ export default function LocationPage() {
       )}
 
       {/* iNaturalist photo grid — click a photo to fly the camera to it. */}
-      {/* Specimen-archive style catalog grid — pale ledger paper, small-caps
-          taxon tags, plate numbers, serif scientific names. */}
+      {/* Same bloom-glow language as the observation popup below: dark
+          ground, warm highlight wash, gold small-caps/tech-font labels.
+          One filtered <img> per tile (not the popup's stacked blur+lighten
+          layers) — with up to hundreds of tiles on screen, three images per
+          card would multiply DOM/image load cost for a difference that's
+          barely visible at thumbnail size. */}
       {showInatGrid && (
-        <div
-          className="absolute inset-0 z-[95] overflow-y-auto"
-          style={{
-            background: '#f3eee1',
-            backgroundImage: 'repeating-linear-gradient(0deg, rgba(43,38,32,0.05) 0px, rgba(43,38,32,0.05) 1px, transparent 1px, transparent 28px)',
-            color: '#2b2620',
-          }}
-        >
-          <div
-            className="sticky top-0 z-10 flex items-end justify-between px-4 py-3 border-b"
-            style={{ background: '#f3eee1', borderColor: '#c9c0a6' }}
-          >
-            <div>
-              <div className="font-sans font-bold text-lg leading-none">iNaturalist Archive</div>
-              <div className="text-[11px] italic mt-0.5" style={{ fontFamily: 'Georgia, serif', color: '#5b5443' }}>
-                field specimen catalog — {location.label}
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-[10px] uppercase tracking-wide" style={{ color: '#8a8270' }}>
-                № 001–{String(inatObs.filter((o) => o.photoUrl).length).padStart(3, '0')}
+        <div className="absolute inset-0 z-[95] overflow-y-auto bg-background/97 backdrop-blur-md">
+          <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-background/90 backdrop-blur border-b border-border/60">
+            <div className="text-sm font-sans font-semibold">
+              iNaturalist observations
+              <span className="ml-2 text-xs text-muted-foreground font-mono">
+                {inatObs.filter((o) => o.photoUrl).length} photos
               </span>
-              <button
-                onClick={() => setShowInatGrid(false)}
-                className="p-1.5 border hover:bg-black/5"
-                style={{ borderColor: '#c9c0a6', color: '#2b2620' }}
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
+            <button
+              onClick={() => setShowInatGrid(false)}
+              className="p-1.5 rounded border border-border/60 hover:bg-accent text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <div className="grid gap-3 p-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
-            {inatObs.filter((o) => o.photoUrl).map((o, i) => (
+          <div className="grid gap-2 p-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
+            {inatObs.filter((o) => o.photoUrl).map((o) => (
               <button
                 key={o.id}
                 onClick={() => flyToObservation(o)}
-                className="group relative text-left border hover:shadow-md transition-shadow"
-                style={{ background: '#f8f5ec', borderColor: '#c9c0a6' }}
+                className="group relative aspect-square rounded-md overflow-hidden border border-border/60 hover:border-primary transition-colors"
                 title={`${o.commonName ?? o.species ?? 'Observation'} — click to fly there`}
               >
-                <div className="relative aspect-square overflow-hidden border-b" style={{ borderColor: '#c9c0a6' }}>
-                  <img
-                    src={o.photoUrl ?? ''}
-                    alt={o.commonName ?? o.species ?? 'iNaturalist observation'}
-                    loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                    style={{ filter: 'saturate(0.85) sepia(0.12)' }}
-                  />
-                  <div
-                    className="absolute top-0 left-0 px-1.5 py-0.5 text-[8px] uppercase tracking-[0.15em]"
-                    style={{ background: '#f8f5ecdd', color: '#5b6b52', borderRight: '1px solid #c9c0a6', borderBottom: '1px solid #c9c0a6' }}
-                  >
+                <img
+                  src={o.photoUrl ?? ''}
+                  alt={o.commonName ?? o.species ?? 'iNaturalist observation'}
+                  loading="lazy"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  style={{ filter: 'contrast(1.2) saturate(1.3) brightness(1.05)' }}
+                />
+                {/* Warm bloom wash, same hue as the popup's highlight layer */}
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse at 40% 30%, rgba(255,240,200,0.25), transparent 65%)',
+                    mixBlendMode: 'screen',
+                  }}
+                />
+                <div
+                  className="absolute inset-x-0 bottom-0 px-1.5 py-1"
+                  style={{
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)',
+                    textShadow: '0 0 2px rgba(255,255,255,0.5), 0 1px 6px rgba(0,0,0,0.7)',
+                  }}
+                >
+                  <div className="uppercase tracking-[0.2em] text-[8px] tech-font" style={{ color: '#ffe08a' }}>
                     {o.iconicTaxon ?? 'Life'}
                   </div>
-                  <div
-                    className="absolute bottom-1 right-1.5 font-mono text-[10px] tabular-nums"
-                    style={{ color: 'rgba(43,38,32,0.45)' }}
-                  >
-                    {String(i + 1).padStart(3, '0')}
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors">
-                    <span className="opacity-0 group-hover:opacity-100 font-mono text-[10px] uppercase tracking-wide text-white transition-opacity" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-                      fly here →
-                    </span>
-                  </div>
-                </div>
-                <div className="px-1.5 py-1">
-                  <div className="text-[11px] font-sans font-semibold leading-tight truncate">
+                  <div className="text-[11px] font-medium leading-tight truncate" style={{ color: '#fffdf3' }}>
                     {o.commonName ?? o.species ?? 'Observation'}
                   </div>
-                  {o.species && (
-                    <div className="text-[10px] italic truncate" style={{ fontFamily: 'Georgia, serif', color: '#5b5443' }}>
-                      {o.species}
-                    </div>
-                  )}
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
+                  <span className="opacity-0 group-hover:opacity-100 tech-font text-[10px] uppercase tracking-wide transition-opacity" style={{ color: '#ffe08a', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
+                    fly here →
+                  </span>
                 </div>
               </button>
             ))}
@@ -1555,82 +1540,90 @@ export default function LocationPage() {
           a plain z-20 overlay sitting at the same screen spot. */}
       {selectedInat && (
         <div className="absolute top-16 right-3 w-80 text-xs z-[90] pointer-events-none">
-          <div
-            key={selectedInat.id}
-            className="pointer-events-auto relative overflow-hidden animate-fade-in border"
-            style={{ background: '#f3eee1', borderColor: '#c9c0a6', color: '#2b2620' }}
-          >
-            {/* Faded catalog number, bleeding off the top edge like a museum plate stamp */}
-            <div
-              aria-hidden
-              className="absolute -top-3 right-2 font-black leading-none pointer-events-none select-none tabular-nums"
-              style={{
-                fontSize: '40px',
-                letterSpacing: '-0.02em',
-                background: 'linear-gradient(90deg, #8fb6c9, #a9c48a)',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                color: 'transparent',
-                opacity: 0.55,
-              }}
-            >
-              {selectedInat.id}
-            </div>
-
-            <button
-              onClick={() => selectInat(null, true)}
-              className="absolute top-1.5 right-1.5 p-1 z-10 text-[#2b2620]/50 hover:text-[#2b2620]"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-
-            {selectedInat.photoUrl ? (
-              <div className="relative w-full h-44 overflow-hidden border-b" style={{ borderColor: '#c9c0a6' }}>
+          <div className="pointer-events-auto">
+            {selectedInat.photoUrl && (
+              <div
+                key={selectedInat.id}
+                className="relative w-full h-52 overflow-hidden animate-fade-in"
+                style={{ transition: 'opacity 600ms ease-out' }}
+              >
+                {/* Bloom glow */}
+                <img
+                  src={selectedInat.photoUrl}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 w-full h-full object-cover scale-110"
+                  style={{ filter: 'blur(24px) saturate(1.6) brightness(1.4)', opacity: 0.75, mixBlendMode: 'screen' }}
+                />
+                {/* Main image, noisy + bloom + overlay, transparent */}
                 <img
                   src={selectedInat.photoUrl}
                   alt={selectedInat.commonName ?? selectedInat.species ?? 'iNaturalist observation'}
-                  className="w-full h-full object-cover"
-                  style={{ filter: 'saturate(0.85) sepia(0.12)' }}
+                  className="relative w-full h-full object-cover"
+                  style={{
+                    filter: 'contrast(1.25) saturate(1.35) brightness(1.1)',
+                    mixBlendMode: 'lighten',
+                    opacity: 0.78,
+                    maskImage: 'radial-gradient(ellipse at center, black 55%, transparent 95%)',
+                    WebkitMaskImage: 'radial-gradient(ellipse at center, black 55%, transparent 95%)',
+                  }}
                   loading="lazy"
                 />
+                {/* SVG grain overlay */}
                 <div
-                  className="absolute top-0 left-0 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.15em]"
-                  style={{ background: '#f3eee1', color: '#5b6b52', borderRight: '1px solid #c9c0a6', borderBottom: '1px solid #c9c0a6' }}
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundImage:
+                      "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+                    mixBlendMode: 'overlay',
+                    opacity: 0.85,
+                  }}
+                />
+                {/* Bloom highlight overlay */}
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse at 40% 30%, rgba(255,240,200,0.35), transparent 60%)',
+                    mixBlendMode: 'screen',
+                  }}
+                />
+                <button
+                  onClick={() => selectInat(null, true)}
+                  className="absolute top-2 right-2 p-1 rounded bg-background/60 backdrop-blur text-foreground hover:bg-background/90"
                 >
-                  {selectedInat.iconicTaxon ?? 'Life'}
-                </div>
-              </div>
-            ) : (
-              <div
-                className="w-full h-16 border-b flex items-center justify-center text-[10px] uppercase tracking-[0.2em]"
-                style={{ borderColor: '#c9c0a6', color: '#8a8270' }}
-              >
-                no image
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
 
-            <div className="relative px-3 pt-2 pb-2.5">
-              <div className="text-[9px] uppercase tracking-[0.2em]" style={{ color: '#8a8270' }}>
-                Observation № {selectedInat.id}
+            <div
+              className="pt-2 pl-1"
+              style={{
+                textShadow:
+                  '0 0 2px rgba(255,255,255,0.9), 0 0 10px rgba(255,255,255,0.55), 0 0 22px rgba(255,220,140,0.35), 0 1px 12px rgba(0,0,0,0.55)',
+              }}
+            >
+              <div className="uppercase tracking-[0.25em] text-[10px] tech-font" style={{ color: '#ffe08a' }}>
+                iNat · {selectedInat.iconicTaxon ?? 'Life'} · #{selectedInat.id}
               </div>
               {selectedInat.commonName && (
-                <div className="font-sans font-bold text-xl leading-tight mt-0.5" style={{ color: '#2b2620' }}>
+                <div className="display-font text-3xl leading-tight mt-1" style={{ color: '#fffdf3' }}>
                   {selectedInat.commonName}
                 </div>
               )}
               {selectedInat.species && (
-                <div className="italic text-[13px] mt-0.5" style={{ fontFamily: 'Georgia, serif', color: '#4a4437' }}>
+                <div className="tech-font text-[11px] italic" style={{ color: '#f2eee0' }}>
                   {selectedInat.species}
                 </div>
               )}
-              <div className="mt-2 pt-2 border-t space-y-0.5 font-mono text-[10px] uppercase tracking-wide" style={{ borderColor: '#c9c0a6', color: '#5b5443' }}>
-                {selectedInat.observedOn && <div>Obs. &nbsp;{selectedInat.observedOn}</div>}
-                {selectedInat.user && <div>Coll. &nbsp;@{selectedInat.user}</div>}
-                <div>Loc. &nbsp;{selectedInat.lat.toFixed(5)}, {selectedInat.lon.toFixed(5)}</div>
+              <div className="mt-2 tech-font text-[10px] space-y-0.5" style={{ color: '#eae5d3' }}>
+                {selectedInat.observedOn && <div>observed {selectedInat.observedOn}</div>}
+                {selectedInat.user && <div>@{selectedInat.user}</div>}
+                <div>{selectedInat.lat.toFixed(5)}, {selectedInat.lon.toFixed(5)}</div>
               </div>
               <a
-                className="mt-2 inline-block hover:underline font-mono text-[10px] uppercase tracking-wide"
-                style={{ color: '#5b6b52' }}
+                className="mt-2 inline-block hover:underline text-[11px] tech-font"
+                style={{ color: '#ffe08a' }}
                 href={selectedInat.url}
                 target="_blank" rel="noreferrer"
               >
