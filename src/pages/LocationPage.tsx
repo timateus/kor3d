@@ -10,6 +10,7 @@ import { useTerrainMode } from '@/hooks/useTerrainMode';
 import MapboxTerrainMesh from '@/components/MapboxTerrainMesh';
 import TerrainStyleOverlay, { type TerrainStyle } from '@/components/TerrainStyleOverlay';
 import OsmWaterwaysLayer from '@/components/location/OsmWaterwaysLayer';
+import LakesLayer, { type LakeFeature } from '@/components/location/LakesLayer';
 import HydroBasinLayer from '@/components/location/HydroBasinLayer';
 import IrrigationCanalsLayer, { type CanalFeature, type ReservoirFeature } from '@/components/location/IrrigationCanalsLayer';
 import OsmPopulationLayer from '@/components/location/OsmPopulationLayer';
@@ -236,6 +237,7 @@ export default function LocationPage() {
   const [showInspector, setShowInspector] = useState(false);
   const [showTerrain, setShowTerrain] = useState(true);
   const [showWater, setShowWater] = useState(true);
+  const [showLakes, setShowLakes] = useState(false);
   const [showPopulation, setShowPopulation] = useState(true);
   const [showPlaces, setShowPlaces] = useState(true);
   const [showOsmBuildings, setShowOsmBuildings] = useState(false);
@@ -320,6 +322,7 @@ export default function LocationPage() {
   }, [showInspector]);
   const [copied, setCopied] = useState<string | null>(null);
   const [selectedWater, setSelectedWater] = useState<import('@/components/location/OsmWaterwaysLayer').WaterFeature | null>(null);
+  const [selectedLake, setSelectedLake] = useState<LakeFeature | null>(null);
   const [selectedBasinRiver, setSelectedBasinRiver] = useState<import('@/components/location/HydroBasinLayer').RiverFeature | null>(null);
   const [basinColorBy, setBasinColorBy] = useState<'order' | 'discharge'>('discharge');
   const [basinDischargeScale, setBasinDischargeScale] = useState<'log' | 'linear'>('log');
@@ -343,6 +346,7 @@ export default function LocationPage() {
   // closes the rest, so only one is ever on screen at a time.
   const closeAllPopups = () => {
     setSelectedWater(null);
+    setSelectedLake(null);
     setSelectedBasinRiver(null);
     setSelectedGlacier(null);
     setSelectedCanal(null);
@@ -446,7 +450,7 @@ export default function LocationPage() {
   // reading (`inatManualRef`/`resourceManualRef`) — checked live inside
   // pickRandom, not via the effect deps, since the ambient picks it makes
   // itself shouldn't trigger a teardown/restart of its own loop.
-  const otherPopupOpen = !!(selectedWater || selectedBasinRiver || selectedGlacier || popPoint || selectedCanal || selectedReservoir);
+  const otherPopupOpen = !!(selectedWater || selectedLake || selectedBasinRiver || selectedGlacier || popPoint || selectedCanal || selectedReservoir);
   useEffect(() => {
     if ((inatObs.length === 0 && resourceObs.length === 0) || otherPopupOpen) return;
     let cancelled = false;
@@ -772,6 +776,17 @@ export default function LocationPage() {
                 onLoaded={() => setWaterLoaded(true)}
               />
             )}
+            {showLakes && (
+              <LakesLayer
+                terrain={terrain}
+                exaggeration={exaggeration}
+                bounds={location.bounds}
+                clipBounds={location.waterBounds ?? location.bounds}
+                enabled={showLakes}
+                dataUrl={`${dataBase}/${location.waterBounds ? 'water_large.json' : 'water.json'}`}
+                onSelect={(f) => { closeAllPopups(); setSelectedLake(f); }}
+              />
+            )}
             {showBasinRivers && (
               <HydroBasinLayer
                 terrain={terrain}
@@ -1082,6 +1097,9 @@ export default function LocationPage() {
             <DropdownMenuLabel>Overlays</DropdownMenuLabel>
             <DropdownMenuCheckboxItem checked={showWater} onCheckedChange={(v) => setShowWater(!!v)}>
               Water
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem checked={showLakes} onCheckedChange={(v) => setShowLakes(!!v)}>
+              Lakes (natural &amp; artificial)
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem checked={showBasinRivers} onCheckedChange={(v) => setShowBasinRivers(!!v)}>
               Basin rivers (HydroSHEDS)
@@ -1439,6 +1457,42 @@ export default function LocationPage() {
           <a
             className="mt-2 inline-block text-primary hover:underline"
             href={`https://www.openstreetmap.org/${String(selectedWater.id).includes('/') ? 'relation' : 'way'}/${String(selectedWater.id).split('/')[0]}`}
+            target="_blank" rel="noreferrer"
+          >
+            open in OSM →
+          </a>
+        </div>
+      )}
+
+      {/* Lake — natural or artificial (reservoir/pond/basin), from the same OSM water data */}
+      {selectedLake && (
+        <div className="absolute top-16 right-3 w-72 p-3 rounded-md bg-background/90 backdrop-blur border border-border/60 text-xs font-mono z-10">
+          <div className="flex items-center justify-between mb-2">
+            <span className="uppercase tracking-widest text-[10px]" style={{ color: selectedLake.artificial ? '#2dd4bf' : '#38bdf8' }}>
+              {selectedLake.waterType} · {selectedLake.artificial ? 'artificial' : 'natural'}
+            </span>
+            <button onClick={() => setSelectedLake(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="text-sm font-sans font-semibold mb-1">{selectedLake.name || selectedLake.waterType}</div>
+          <div className="space-y-0.5">
+            <div className="flex gap-2 leading-tight">
+              <span className="text-muted-foreground shrink-0">area</span>
+              <span>{selectedLake.areaKm2 < 0.1 ? (selectedLake.areaKm2 * 1e6).toFixed(0) + ' m²' : selectedLake.areaKm2.toFixed(2) + ' km²'}</span>
+            </div>
+            <div className="flex gap-2 leading-tight">
+              <span className="text-muted-foreground shrink-0">coords</span>
+              <span>{selectedLake.lat.toFixed(5)}, {selectedLake.lon.toFixed(5)}</span>
+            </div>
+            <div className="flex gap-2 leading-tight">
+              <span className="text-muted-foreground shrink-0">id</span>
+              <span>{String(selectedLake.id)}</span>
+            </div>
+          </div>
+          <a
+            className="mt-2 inline-block text-primary hover:underline"
+            href={`https://www.openstreetmap.org/${String(selectedLake.id).includes('/') ? 'relation' : 'way'}/${String(selectedLake.id).split('/')[0]}`}
             target="_blank" rel="noreferrer"
           >
             open in OSM →
