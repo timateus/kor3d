@@ -421,13 +421,14 @@ export default function LocationPage() {
 
   // Auto-cycle: an ambient slideshow that, after 5s with nothing selected,
   // picks a random observation and keeps rotating every ~4s. It must not run
-  // while a *different* kind of popup (river/water/glacier/population) is
-  // open — that's `otherPopupOpen`, checked once per effect run — and each
+  // while a *different* kind of popup (river/water/glacier/population/
+  // resource/canal/reservoir) is open — that's `otherPopupOpen`, checked
+  // once per effect run — and each
   // tick must not clobber a *manually* selected observation the user is
   // currently reading (`inatManualRef`) — checked live inside pickRandom, not
   // via the effect deps, since the ambient picks it makes itself shouldn't
   // trigger a teardown/restart of its own loop.
-  const otherPopupOpen = !!(selectedWater || selectedBasinRiver || selectedGlacier || popPoint);
+  const otherPopupOpen = !!(selectedWater || selectedBasinRiver || selectedGlacier || popPoint || selectedResource || selectedCanal || selectedReservoir);
   useEffect(() => {
     if (inatObs.length === 0 || otherPopupOpen) return;
     let cancelled = false;
