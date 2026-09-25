@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, RotateCcw } from 'lucide-react';
 
 /**
  * Central Asia river/lake basins — population by HydroBASINS sub-basin
@@ -17,13 +16,15 @@ import { ArrowLeft, RotateCcw } from 'lucide-react';
  * (not one path per reach) — thousands of separate <path> elements is what
  * made the first version of this map laggy to pan/zoom.
  *
- * Two color modes: 'basin' (golden-angle categorical hue per shape — good
- * for telling basins apart, useless for comparing magnitude) and 'density'
- * (sequential scale in the app's own accent hue, with a legend — answers
- * "where is it denser" at a glance, which categorical color structurally
- * cannot). A design critique flagged shipping only the categorical mode as
- * answering the wrong question for population data; both are kept and the
- * viewer picks.
+ * Visual direction: "Ma" (間) — ikebana's principle of charged negative
+ * space. Two earlier directions (a golden-angle rainbow choropleth, then a
+ * sequential-density variant) were both rejected in review as generic
+ * dashboard defaults. This build foregrounds only the three basins that
+ * carry most of the region's population (Сырдарья, Амударья, Иле-Балхаш) in
+ * indigo ink and lets the other ~109 recede to bare ghost outlines —
+ * hierarchy made of absence, not chrome. See
+ * .impeccable/surfaces/src-pages-basinspage-tsx.md for the full direction
+ * contract this build is accountable to.
  */
 
 const D3_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js';
@@ -122,35 +123,30 @@ const CITIES = [
   { name: 'Балканабат', lon: 54.366, lat: 39.511, tier: 3 },
 ];
 
-const GOLDEN_ANGLE = 137.50776;
-function categoryColor(i: number) {
-  const hue = (i * GOLDEN_ANGLE) % 360;
-  return `hsl(${hue.toFixed(1)}, 70%, 53%)`;
-}
-
-// Sequential ramp in the app's own accent hue (--primary: 190 70% 50% in
-// index.css) rather than a generic d3 built-in — ties the density view back
-// to kor3d's own palette instead of an arbitrary import.
-const DENSITY_LOW = 'hsl(190, 35%, 92%)';
-const DENSITY_HIGH = 'hsl(190, 78%, 22%)';
-
 const dataBase = `${import.meta.env.BASE_URL}data/basins`;
 
-type ColorMode = 'basin' | 'density';
 type LevelKey = 'main' | 'lvl3';
 
+const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Noto+Serif+Display:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap';
+function ensureFontLink(){
+  if (document.querySelector(`link[href="${FONT_HREF}"]`)) return;
+  const l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = FONT_HREF;
+  document.head.appendChild(l);
+}
+
 export default function BasinsPage() {
+  useEffect(() => { ensureFontLink(); }, []);
   const svgRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [retryTick, setRetryTick] = useState(0);
   const [stats, setStats] = useState({ n: 0, pop: '—', area: '—' });
+  const [stems, setStems] = useState<{ name: string; pop: string }[]>([]);
   const [level, setLevel] = useState<LevelKey>('main');
-  const [colorMode, setColorMode] = useState<ColorMode>('basin');
-  const [maxDensity, setMaxDensity] = useState(0);
   const loadLevelRef = useRef<(key: LevelKey) => void>();
-  const setColorModeRef = useRef<(mode: ColorMode) => void>();
   const resetViewRef = useRef<() => void>();
 
   useEffect(() => {
@@ -178,9 +174,9 @@ export default function BasinsPage() {
         const svg = d3.select(svgRef.current);
         svg.selectAll('*').remove();
         const g = svg.append('g');
+        const gCountry = g.append('g');
         const gBasins = g.append('g');
         const gRivers = g.append('g');
-        const gBorders = g.append('g');
         const gCities = g.append('g');
 
         const projection = d3.geoConicEqualArea().parallels([32, 54]).rotate([-68, 0]);
@@ -189,44 +185,55 @@ export default function BasinsPage() {
         const fmtPop = (n: number) => d3.format(',.0f')(n).replace(/,/g, ' ');
         let pinned: any = null;
         let levelKey: LevelKey = 'main';
-        let mode: ColorMode = 'basin';
         let feats: any[] = [];
-        let maxDens = 1;
+        let topIds: number[] = [];
 
         function basinName(mainBas: number) {
           return LEVELS[levelKey].names[mainBas] || 'Малый бессточный бассейн';
         }
 
-        function densityColor(d: number) {
-          const t = Math.log1p(d) / Math.log1p(maxDens || 1);
-          return d3.interpolateHsl(DENSITY_LOW, DENSITY_HIGH)(Math.max(0, Math.min(1, t)));
+        function rankOf(mainBas: number) {
+          const i = topIds.indexOf(mainBas);
+          return i; // -1 = ghost, 0 = primary, 1/2 = accent
         }
 
-        function colorFor(i: number, p: any) {
-          return mode === 'basin' ? categoryColor(i) : densityColor(p.density_km2);
+        function fillFor(mainBas: number) {
+          const r = rankOf(mainBas);
+          if (r === 0) return '#46557e';
+          if (r > 0) return '#7386ad';
+          return '#dcd4bf';
         }
 
-        function fit() {
+        function isMobile(){ return window.innerWidth < 720; }
+
+        function fit(){
           const rect = svg.node().getBoundingClientRect();
           if (!rect.width || !rect.height) return;
           svg.attr('viewBox', `0 0 ${rect.width} ${rect.height}`);
-          projection.fitExtent([[24, 20], [rect.width - 24, rect.height - 20]], countries);
+          const leftFrac = isMobile() ? 0.04 : 0.13;
+          const rightFrac = isMobile() ? 0.04 : 0.40;
+          const topPad = isMobile() ? 10 : 90;
+          const bottomPad = isMobile() ? 10 : 60;
+          projection.fitExtent(
+            [[rect.width * leftFrac, topPad], [rect.width * (1 - rightFrac), rect.height - bottomPad]],
+            countries
+          );
           gBasins.selectAll('path').attr('d', path);
           gRivers.selectAll('path').attr('d', path);
-          gBorders.selectAll('path').attr('d', path);
+          gCountry.selectAll('path').attr('d', path);
           gCities.selectAll('g.city').attr('transform', (d: any) => {
             const c = projection([d.lon, d.lat]);
             return c ? `translate(${c[0]},${c[1]})` : 'translate(-9999,-9999)';
           });
         }
 
-        function clearTooltip() {
+        function clearTooltip(){
           pinned = null;
           tooltip.style('opacity', 0).style('transform', 'translate(-9999px,-9999px)');
           gBasins.selectAll('path.selected').classed('selected', false);
         }
 
-        function showTooltip(event: any, el: any, d: any) {
+        function showTooltip(event: any, el: any, d: any){
           const p = d.properties;
           const [mx, my] = d3.pointer(event, svg.node().parentNode);
           tooltip.html(`
@@ -237,113 +244,103 @@ export default function BasinsPage() {
           `);
           const rect = svg.node().parentNode.getBoundingClientRect();
           let left = mx + 16, top = my + 16;
-          if (left + 260 > rect.width) left = mx - 266;
-          if (top + 100 > rect.height) top = my - 110;
+          if (left + 220 > rect.width) left = mx - 226;
+          if (top + 96 > rect.height) top = my - 106;
           tooltip.style('transform', `translate(${left}px, ${top}px)`).style('opacity', 1);
           d3.select(el).raise();
           gBasins.selectAll('path.selected').classed('selected', false);
           d3.select(el).classed('selected', true);
         }
 
-        function activate(event: any, el: any, d: any) {
+        function activate(event: any, el: any, d: any){
           if (pinned === el) { clearTooltip(); return; }
           pinned = el;
           showTooltip(event, el, d);
         }
 
-        function renderBasins() {
+        function renderBasins(){
           gBasins.selectAll('path')
             .data(feats)
             .join('path')
-            .attr('class', 'bp-basin')
+            .attr('class', (d: any) => 'bp-basin' + (rankOf(d.properties.main_bas) >= 0 ? ' bp-basin--ink' : ''))
             .attr('d', path)
-            .attr('fill', (d: any, i: number) => colorFor(i, d.properties))
+            .attr('fill', (d: any) => fillFor(d.properties.main_bas))
             .attr('tabindex', 0)
             .attr('role', 'button')
             .attr('aria-label', (d: any) => {
               const p = d.properties;
               return `${basinName(p.main_bas)}: население ${fmtPop(p.population)}, площадь ${fmtPop(p.area_km2)} км², плотность ${p.density_km2.toFixed(2)} человек на км²`;
             })
-            .on('mousemove', function (this: any, event: any, d: any) {
-              if (pinned) return;
-              showTooltip(event, this, d);
-            })
-            .on('mouseleave', function (this: any) {
+            .on('mousemove', function (this: any, event: any, d: any){ if (!pinned) showTooltip(event, this, d); })
+            .on('mouseleave', function (this: any){
               if (pinned) return;
               tooltip.style('opacity', 0).style('transform', 'translate(-9999px,-9999px)');
               d3.select(this).classed('selected', false);
             })
-            .on('click', function (this: any, event: any, d: any) {
-              event.stopPropagation();
-              activate(event, this, d);
-            })
-            .on('focus', function (this: any, event: any, d: any) {
-              showTooltip(event, this, d);
-            })
-            .on('blur', function (this: any) {
-              if (pinned !== this) {
+            .on('click', function (this: any, event: any, d: any){ event.stopPropagation(); activate(event, this, d); })
+            .on('focus', function (this: any, event: any, d: any){ showTooltip(event, this, d); })
+            .on('blur', function (this: any){
+              if (pinned !== this){
                 tooltip.style('opacity', 0).style('transform', 'translate(-9999px,-9999px)');
                 d3.select(this).classed('selected', false);
               }
             })
-            .on('keydown', function (this: any, event: any, d: any) {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                activate(event, this, d);
-              }
+            .on('keydown', function (this: any, event: any, d: any){
+              if (event.key === 'Enter' || event.key === ' '){ event.preventDefault(); activate(event, this, d); }
             });
         }
 
         svg.on('click', clearTooltip);
 
+        gCountry.selectAll('path')
+          .data(countries.features)
+          .join('path')
+          .attr('class', 'bp-country-line');
+
         gRivers.selectAll('path')
           .data(rivers.features)
           .join('path')
           .attr('class', 'bp-river')
-          .attr('stroke-width', (d: any) => Math.max(0.5, (d.properties.ord_stra - 4) * 0.55));
-
-        gBorders.selectAll('path')
-          .data(countries.features)
-          .join('path')
-          .attr('class', 'bp-country-border');
+          .attr('stroke-width', (d: any) => Math.max(0.3, (d.properties.ord_stra - 4) * 0.35));
 
         const cityG = gCities.selectAll('g.city').data(CITIES).join('g').attr('class', 'city');
         cityG.append('circle')
           .attr('class', 'bp-city-dot')
-          .attr('r', (d: any) => (d.tier === 1 ? 4 : d.tier === 2 ? 2.8 : 1.9));
+          .attr('r', (d: any) => (d.tier === 1 ? 3.2 : d.tier === 2 ? 2.2 : 1.5));
         cityG.append('text')
           .attr('class', 'bp-city-label')
-          .attr('x', (d: any) => (d.tier === 1 ? 7 : 5))
-          .attr('y', 4)
-          .attr('font-size', (d: any) => (d.tier === 1 ? 13 : d.tier === 2 ? 11 : 9.5))
+          .attr('x', (d: any) => (d.tier === 1 ? 6.5 : 4.5))
+          .attr('y', 3.5)
+          .attr('font-size', (d: any) => (d.tier === 1 ? 12.5 : d.tier === 2 ? 10.5 : 9))
           .text((d: any) => d.name);
 
         const zoom = d3.zoom().scaleExtent([1, 14]).on('zoom', (event: any) => {
           g.attr('transform', event.transform);
           gCities.selectAll('circle.bp-city-dot').attr('r', (d: any) => {
-            const base = d.tier === 1 ? 4 : d.tier === 2 ? 2.8 : 1.9;
+            const base = d.tier === 1 ? 3.2 : d.tier === 2 ? 2.2 : 1.5;
             return base / event.transform.k;
           });
           gCities.selectAll('text.bp-city-label')
             .attr('font-size', (d: any) => {
-              const base = d.tier === 1 ? 13 : d.tier === 2 ? 11 : 9.5;
+              const base = d.tier === 1 ? 12.5 : d.tier === 2 ? 10.5 : 9;
               return base / event.transform.k;
             })
-            .attr('x', (d: any) => (d.tier === 1 ? 7 : 5) / event.transform.k);
-          gCities.selectAll('.bp-city-label').attr('stroke-width', 3 / event.transform.k);
+            .attr('x', (d: any) => (d.tier === 1 ? 6.5 : 4.5) / event.transform.k);
+          gCities.selectAll('.bp-city-label').attr('stroke-width', 2.5 / event.transform.k);
         });
         svg.call(zoom);
 
-        function resetView() {
+        function resetView(){
           svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity);
         }
         resetViewRef.current = resetView;
 
-        function loadLevel(key: LevelKey) {
+        function loadLevel(key: LevelKey){
           levelKey = key;
           feats = LEVELS[key].data.features.filter((f: any) => f.geometry);
-          maxDens = d3.max(feats, (f: any) => f.properties.density_km2) || 1;
-          setMaxDensity(maxDens);
+          const ranked = [...feats].sort((a, b) => b.properties.population - a.properties.population);
+          topIds = ranked.slice(0, 3).map((f: any) => f.properties.main_bas);
+
           const totalPop = d3.sum(feats, (f: any) => f.properties.population);
           const totalArea = d3.sum(feats, (f: any) => f.properties.area_km2);
           setStats({
@@ -351,16 +348,17 @@ export default function BasinsPage() {
             pop: d3.format(',.2s')(totalPop).replace('G', 'млрд').replace('M', 'млн').replace('k', 'тыс').replace(/,/g, ' '),
             area: d3.format(',.2s')(totalArea).replace('M', 'млн').replace('k', 'тыс').replace(/,/g, ' '),
           });
+          setStems(
+            ranked.slice(0, 3).map((f: any) => ({
+              name: basinName(f.properties.main_bas),
+              pop: (f.properties.population / 1e6).toFixed(1) + ' млн',
+            }))
+          );
+
           clearTooltip();
           renderBasins();
         }
         loadLevelRef.current = loadLevel;
-
-        function applyColorMode(m: ColorMode) {
-          mode = m;
-          gBasins.selectAll('path').attr('fill', (d: any, i: number) => colorFor(i, d.properties));
-        }
-        setColorModeRef.current = applyColorMode;
 
         window.addEventListener('resize', fit);
         fit();
@@ -386,131 +384,146 @@ export default function BasinsPage() {
     };
   }, [retryTick]);
 
-  // Escape resets the view — the only other way back once zoomed/panned is
-  // otherwise a full page reload, which was the P0 this restores.
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') resetViewRef.current?.();
-    }
+    function onKey(e: KeyboardEvent){ if (e.key === 'Escape') resetViewRef.current?.(); }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const densityMax = maxDensity > 0 ? maxDensity.toFixed(0) : '—';
-
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground overflow-hidden">
+    <div className="relative min-h-screen w-screen overflow-x-hidden bp-root sm:h-screen sm:overflow-hidden">
       <style>{`
-        .bp-basin{ stroke:hsl(220 20% 8%); stroke-width:0.9; vector-effect:non-scaling-stroke; cursor:pointer; }
-        .bp-basin:hover{ filter:brightness(1.1); }
-        .bp-basin:focus-visible{ outline:none; stroke:hsl(190 78% 60%); stroke-width:2.5; }
-        .bp-basin.selected{ stroke:#fff; stroke-width:2.2; }
-        .bp-river{ fill:none; stroke:#bfe6f2; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; pointer-events:none; opacity:0.85; }
-        .bp-country-border{ fill:none; stroke:#fff; stroke-width:1.3; stroke-dasharray:4 2; opacity:0.4; vector-effect:non-scaling-stroke; pointer-events:none; }
-        .bp-city-dot{ fill:#fff; stroke:hsl(220 20% 8%); stroke-width:1px; vector-effect:non-scaling-stroke; pointer-events:none; }
-        .bp-city-label{ font-family:'Inter', sans-serif; fill:#fff; paint-order:stroke; stroke:hsl(220 20% 8%); stroke-width:3px; stroke-linejoin:round; pointer-events:none; font-weight:500; }
-        .bp-tooltip{ position:absolute; top:0; left:0; pointer-events:none; background:hsl(220 18% 12%); border:1px solid hsl(220 15% 22%); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.4); padding:10px 12px; font-size:12.5px; max-width:250px; opacity:0; transform:translate(-9999px,-9999px); z-index:10; }
-        .bp-name{ font-weight:600; font-size:14px; margin-bottom:6px; }
-        .bp-row{ display:flex; justify-content:space-between; gap:14px; padding:2px 0; color:hsl(215 15% 65%); }
-        .bp-row b{ color:hsl(210 20% 90%); font-variant-numeric:tabular-nums; font-weight:500; }
+        .bp-root{ background:#eae4d6; font-family:'Noto Serif Display', serif; }
+        .bp-basin{ stroke:#b3a98f; stroke-width:0.55; vector-effect:non-scaling-stroke; cursor:pointer; fill-opacity:1; transition:filter 0.15s; }
+        .bp-basin--ink{ stroke:#2e3a5c; stroke-width:0.9; }
+        .bp-basin:hover{ filter:brightness(1.08) saturate(1.1); }
+        .bp-basin:focus-visible{ outline:none; stroke:#46557e; stroke-width:2.2; }
+        .bp-basin.selected{ stroke:#2e2418; stroke-width:2; }
+        .bp-river{ fill:none; stroke:#9a927a; stroke-width:0.6; opacity:0.5; pointer-events:none; }
+        .bp-country-line{ fill:none; stroke:#726b52; stroke-width:0.9; stroke-dasharray:0.5 3; stroke-linecap:round; opacity:0.45; pointer-events:none; vector-effect:non-scaling-stroke; }
+        .bp-city-dot{ fill:#2e2418; stroke:#eae4d6; stroke-width:0.9px; vector-effect:non-scaling-stroke; pointer-events:none; }
+        .bp-city-label{ font-family:'Noto Serif Display', serif; font-style:italic; font-weight:400; fill:#2e2418; paint-order:stroke; stroke:#eae4d6; stroke-width:2.5px; pointer-events:none; }
+        .bp-tooltip{ position:absolute; top:0; left:0; pointer-events:none; background:#f2ecdd; border:1px solid #b3a98f; padding:9px 11px; font-size:12px; max-width:220px; opacity:0; transform:translate(-9999px,-9999px); z-index:10; font-family:'JetBrains Mono', monospace; box-shadow:0 6px 18px rgba(46,36,24,0.18); }
+        .bp-name{ font-family:'Noto Serif Display', serif; font-style:italic; font-weight:500; font-size:14.5px; margin-bottom:5px; color:#2e2418; }
+        .bp-row{ display:flex; justify-content:space-between; gap:12px; padding:1.5px 0; color:#8a8368; }
+        .bp-row b{ color:#2e2418; font-variant-numeric:tabular-nums; font-weight:500; }
+
+        .bp-vtitle{ writing-mode:vertical-rl; font-style:italic; font-weight:300; letter-spacing:0.08em; color:#3a3626; }
+        .bp-vsub{ writing-mode:vertical-rl; font-family:'JetBrains Mono', monospace; letter-spacing:0.06em; color:#8a8368; }
+        .bp-stem-bar{ width:20px; height:2px; background:#46557e; flex:none; }
+        .bp-stem-bar--ghost{ width:11px; background:#b3a98f; }
+        .bp-select{ appearance:none; background:transparent; border:none; border-bottom:1px solid #8a8368; color:#3a3626; font-family:'JetBrains Mono', monospace; font-size:11px; padding:2px 16px 3px 0; cursor:pointer; }
+
+        @media (max-width: 720px){
+          .bp-vtitle{ writing-mode:horizontal-tb; font-size:18px !important; }
+          .bp-vsub{ writing-mode:horizontal-tb; font-size:9px !important; }
+        }
       `}</style>
 
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-4 py-3 sm:px-6 sm:py-4">
-        <div className="max-w-xl">
-          <Link to="/" className="mb-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground sm:mb-2">
-            <ArrowLeft className="h-3 w-3" /> назад
-          </Link>
-          <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Бассейны Центральной Азии</h1>
-          <p className="mt-1 hidden text-xs text-muted-foreground sm:block">
-            Речные и озёрные бассейны Казахстана, Узбекистана, Туркменистана, Таджикистана и Киргизии —
-            HydroBASINS (Lehner &amp; Grill, 2013), население GHS-POP R2023A.
-          </p>
+      {/* left margin: title + back link */}
+      <div className="absolute left-3 top-4 z-10 flex items-start gap-2 sm:left-12 sm:top-14 sm:gap-3">
+        <Link to="/" className="mt-0.5 font-mono text-[10px] text-[#8a8368] hover:text-[#3a3626] sm:mt-1" style={{ writingMode: 'inherit' }}>
+          ←
+        </Link>
+        <div className="flex items-baseline gap-2 sm:flex-col sm:items-start sm:gap-3">
+          <h1 className="bp-vtitle text-[18px] sm:text-[21px]">центральная азия</h1>
+          <p className="bp-vsub text-[9px]">HYDROBASINS · GHS-POP</p>
         </div>
-        <div className="flex gap-4 text-right font-mono text-xs tabular-nums sm:gap-6 sm:text-sm">
-          <div><div className="text-base sm:text-lg">{stats.n || '—'}</div><div className="text-[9px] uppercase tracking-wide text-muted-foreground sm:text-[10px]">бассейнов</div></div>
-          <div><div className="text-base sm:text-lg">{stats.pop}</div><div className="text-[9px] uppercase tracking-wide text-muted-foreground sm:text-[10px]">население</div></div>
-          <div><div className="text-base sm:text-lg">{stats.area}</div><div className="text-[9px] uppercase tracking-wide text-muted-foreground sm:text-[10px]">км²</div></div>
-        </div>
-      </header>
+      </div>
 
-      <div className="flex flex-wrap items-center gap-3 border-b border-border bg-card px-4 py-2 sm:gap-4 sm:px-6">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="basins-level" className="text-[10px] uppercase tracking-wide text-muted-foreground">Уровень бассейнов</label>
+      {/* right margin: stem list + controls, quiet, no cards */}
+      <div className="absolute right-4 top-14 z-10 hidden w-[210px] flex-col gap-5 sm:flex sm:right-10">
+        <div className="flex flex-col gap-4">
+          {stems.map((s, i) => (
+            <div key={s.name} className="flex items-baseline gap-2.5">
+              <span className={'bp-stem-bar' + (i === 0 ? '' : '')} />
+              <span className="font-serif text-[15px] italic text-[#3a3626]">{s.name}</span>
+              <span className="ml-auto font-mono text-[10px] text-[#8a8368]">{s.pop}</span>
+            </div>
+          ))}
+          <div className="flex items-baseline gap-2.5">
+            <span className="bp-stem-bar bp-stem-bar--ghost" />
+            <span className="font-mono text-[11px] text-[#8a8368]">+{Math.max(0, stats.n - 3)} малых</span>
+          </div>
+        </div>
+
+        <div className="mt-2 flex flex-col gap-1 border-t border-[#c9c0a4] pt-3 font-mono text-[10px] text-[#8a8368]">
+          <span>{stats.pop} чел. · {stats.area} км²</span>
+        </div>
+
+        <div className="mt-2 flex flex-col gap-1.5">
+          <label htmlFor="basins-level" className="font-mono text-[9px] uppercase tracking-wide text-[#8a8368]">уровень</label>
           <select
             id="basins-level"
-            className="rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            className="bp-select"
             value={level}
-            onChange={(e) => {
-              const v = e.target.value as LevelKey;
-              setLevel(v);
-              loadLevelRef.current?.(v);
-            }}
+            onChange={(e) => { const v = e.target.value as LevelKey; setLevel(v); loadLevelRef.current?.(v); }}
           >
-            <option value="lvl3">Крупные (9)</option>
-            <option value="main">По речным системам (112)</option>
+            <option value="lvl3">крупные (9)</option>
+            <option value="main">по речным системам (112)</option>
           </select>
         </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Цвет</span>
-          <div className="inline-flex rounded-md border border-border bg-background p-0.5" role="group" aria-label="Режим окраски">
-            {(['basin', 'density'] as ColorMode[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => {
-                  setColorMode(m);
-                  setColorModeRef.current?.(m);
-                }}
-                className={`rounded px-2 py-1 text-xs transition-colors ${colorMode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                aria-pressed={colorMode === m}
-              >
-                {m === 'basin' ? 'По бассейнам' : 'По плотности'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {colorMode === 'density' && (
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">чел/км² (нелин. шкала)</span>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[10px] text-muted-foreground">0</span>
-              <div className="h-2.5 w-24 rounded-full" style={{ background: `linear-gradient(to right, ${DENSITY_LOW}, ${DENSITY_HIGH})` }} />
-              <span className="font-mono text-[10px] text-muted-foreground">{densityMax}</span>
-            </div>
-          </div>
-        )}
 
         <button
           type="button"
           onClick={() => resetViewRef.current?.()}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+          className="mt-1 w-fit font-mono text-[10px] text-[#8a8368] underline decoration-dotted hover:text-[#3a3626]"
           title="Сбросить вид (Esc)"
         >
-          <RotateCcw className="h-3 w-3" /> Сбросить вид
+          сбросить вид
         </button>
       </div>
 
-      <main className="relative min-h-0 flex-1">
+      {/* mobile controls (title's vertical treatment drops on narrow screens, so
+          the level/reset controls get their own compact row instead of the
+          quiet right-margin column, which has no room there) */}
+      <div className="absolute left-3 top-16 z-10 flex items-center gap-3 sm:hidden">
+        <select
+          className="bp-select text-[11px]"
+          value={level}
+          onChange={(e) => { const v = e.target.value as LevelKey; setLevel(v); loadLevelRef.current?.(v); }}
+        >
+          <option value="lvl3">крупные (9)</option>
+          <option value="main">по речным системам (112)</option>
+        </select>
+        <button
+          type="button"
+          onClick={() => resetViewRef.current?.()}
+          className="font-mono text-[10px] text-[#8a8368] underline decoration-dotted"
+        >
+          сбросить
+        </button>
+      </div>
+
+      <div className="absolute left-3 top-[104px] z-10 flex flex-wrap items-baseline gap-x-4 gap-y-1 pr-6 sm:hidden">
+        {stems.map((s) => (
+          <span key={s.name} className="flex items-baseline gap-1.5">
+            <span className="font-serif text-[13px] italic text-[#3a3626]">{s.name}</span>
+            <span className="font-mono text-[9px] text-[#8a8368]">{s.pop}</span>
+          </span>
+        ))}
+        <span className="font-mono text-[9px] text-[#8a8368]">+{Math.max(0, stats.n - 3)} малых · {stats.pop} чел.</span>
+      </div>
+
+      <main className="relative mt-40 aspect-[1.45/1] w-full sm:mt-0 sm:aspect-auto sm:absolute sm:inset-0 sm:h-full">
         {status === 'loading' && (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+          <div className="absolute inset-0 flex items-center justify-center font-mono text-xs text-[#8a8368]">
             <div className="flex flex-col items-center gap-2">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
-              Загрузка карты…
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#c9c0a4] border-t-[#46557e]" />
+              загрузка…
             </div>
           </div>
         )}
         {status === 'error' && (
-          <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-destructive">
+          <div className="absolute inset-0 flex items-center justify-center px-6 text-center font-mono text-xs text-[#7a3b2e]">
             <div className="flex flex-col items-center gap-3">
-              <p>Не удалось загрузить карту бассейнов{errorDetail ? ` — источник: ${errorDetail}` : ''}.</p>
+              <p>не удалось загрузить карту{errorDetail ? ` — источник: ${errorDetail}` : ''}.</p>
               <button
                 type="button"
                 onClick={() => setRetryTick((t) => t + 1)}
-                className="rounded-md border border-destructive/40 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10"
+                className="border border-[#7a3b2e]/40 px-3 py-1.5 text-[11px] hover:bg-[#7a3b2e]/10"
               >
-                Повторить
+                повторить
               </button>
             </div>
           </div>
@@ -519,13 +532,16 @@ export default function BasinsPage() {
           ref={svgRef}
           className="h-full w-full cursor-grab active:cursor-grabbing"
           role="group"
-          aria-label="Интерактивная карта бассейнов Центральной Азии — фокусируйтесь клавишей Tab, выбирайте Enter или пробелом"
+          aria-label="Карта бассейнов Центральной Азии — фокусируйтесь клавишей Tab, выбирайте Enter или пробелом"
         />
         <div ref={tooltipRef} className="bp-tooltip" role="status" aria-live="polite" />
-        <div className="absolute bottom-3 left-3 hidden rounded-md bg-background/80 px-2 py-1 text-[10.5px] text-muted-foreground sm:block">
-          HydroBASINS v1c · HydroRIVERS v1.0 · GHS-POP R2023A (JRC) · наведите, кликните или сфокусируйте Tab на бассейн
+        <div className="absolute bottom-3 left-3 hidden max-w-[220px] font-mono text-[9.5px] leading-relaxed text-[#8a8368] sm:left-12 sm:bottom-8 sm:block">
+          HydroBASINS v1c · HydroRIVERS v1.0 · GHS-POP R2023A (JRC) — наведите, кликните или Tab+Enter
         </div>
       </main>
+      <div className="mt-3 px-3 pb-6 font-mono text-[9.5px] leading-relaxed text-[#8a8368] sm:hidden">
+        HydroBASINS v1c · HydroRIVERS v1.0 · GHS-POP R2023A (JRC) — наведите или кликните на бассейн
+      </div>
     </div>
   );
 }
