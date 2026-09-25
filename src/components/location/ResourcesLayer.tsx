@@ -15,6 +15,8 @@ export interface ResourceFeature {
   categoryLabel: string;
   label: string;
   kind: 'point' | 'area';
+  lat: number;
+  lon: number;
 }
 
 interface ResourcePoint {
@@ -229,7 +231,10 @@ const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, da
         linewidth: 1.6, transparent: true, opacity: 0.85, depthTest: true,
         resolution: new THREE.Vector2(size.width, size.height),
       });
-      return { id: a.id, category: a.category, label: a.label, geo, y: cy, outlineGeom, outlineMat };
+      return {
+        id: a.id, category: a.category, label: a.label, geo, y: cy, outlineGeom, outlineMat,
+        lat: sumLat / a.coords.length, lon: sumLon / a.coords.length,
+      };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, data, terrain, exaggeration, bounds, size.width, size.height]);
@@ -250,7 +255,7 @@ const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, da
             rotation={[-Math.PI / 2, 0, 0]}
             onClick={(e) => {
               e.stopPropagation();
-              onSelect?.({ id: p.id, category: p.category, categoryLabel: CATEGORY_STYLE[p.category].label, label: p.label, kind: 'area' });
+              onSelect?.({ id: p.id, category: p.category, categoryLabel: CATEGORY_STYLE[p.category].label, label: p.label, kind: 'area', lat: p.lat, lon: p.lon });
             }}
             onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
             onPointerOut={() => { document.body.style.cursor = ''; }}
@@ -273,7 +278,7 @@ const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, da
             position={m.pos}
             onClick={(e) => {
               e.stopPropagation();
-              onSelect?.({ id: m.id, category: m.category, categoryLabel: s.label, label: m.label, kind: 'point' });
+              onSelect?.({ id: m.id, category: m.category, categoryLabel: s.label, label: m.label, kind: 'point', lat: m.lat, lon: m.lon });
             }}
             onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
             onPointerOut={() => { document.body.style.cursor = ''; }}

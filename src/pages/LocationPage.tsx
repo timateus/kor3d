@@ -925,10 +925,10 @@ export default function LocationPage() {
           barely visible at thumbnail size. */}
       {showInatGrid && (
         <div className="absolute inset-0 z-[95] overflow-y-auto bg-background/97 backdrop-blur-md">
-          <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-background/90 backdrop-blur border-b border-border/60">
-            <div className="text-sm font-sans font-semibold">
-              iNaturalist observations
-              <span className="ml-2 text-xs text-muted-foreground font-mono">
+          <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-2.5 bg-background/90 backdrop-blur border-b border-border/60">
+            <div className="flex items-baseline gap-2">
+              <span className="uppercase tracking-[0.2em] text-[10px] tech-font text-primary">iNaturalist</span>
+              <span className="text-[11px] text-muted-foreground font-mono">
                 {inatObs.filter((o) => o.photoUrl).length} photos
               </span>
             </div>
@@ -972,21 +972,21 @@ export default function LocationPage() {
                     mixBlendMode: 'screen',
                   }}
                 />
-                {/* Text overlaid directly on the image, like the popup's caption block. */}
+                {/* Text centered on the image, large — allowed to overlap the photo. */}
                 <div
-                  className="absolute inset-x-0 bottom-0 p-1.5"
+                  className="absolute inset-0 flex flex-col items-center justify-center text-center px-2 pointer-events-none"
                   style={{
-                    textShadow: '0 0 2px rgba(255,255,255,0.9), 0 0 10px rgba(255,255,255,0.55), 0 0 22px rgba(255,220,140,0.35), 0 1px 12px rgba(0,0,0,0.55)',
+                    textShadow: '0 0 3px rgba(255,255,255,0.9), 0 0 14px rgba(255,255,255,0.6), 0 0 30px rgba(255,220,140,0.4), 0 2px 16px rgba(0,0,0,0.6)',
                   }}
                 >
-                  <div className="uppercase tracking-[0.2em] text-[8px] tech-font" style={{ color: '#ffe08a' }}>
+                  <div className="uppercase tracking-[0.2em] text-[10px] tech-font" style={{ color: '#ffe08a' }}>
                     {o.iconicTaxon ?? 'Life'} · #{o.id}
                   </div>
-                  <div className="text-[11px] font-medium leading-tight truncate" style={{ color: '#fffdf3' }}>
+                  <div className="text-lg font-semibold leading-tight" style={{ color: '#fffdf3' }}>
                     {o.commonName ?? o.species ?? 'Observation'}
                   </div>
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
+                <div className="absolute inset-0 flex items-end justify-center pb-3 bg-black/0 group-hover:bg-black/20 transition-colors">
                   <span className="opacity-0 group-hover:opacity-100 tech-font text-[10px] uppercase tracking-wide transition-opacity" style={{ color: '#ffe08a', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
                     fly here →
                   </span>
@@ -1451,9 +1451,27 @@ export default function LocationPage() {
             </button>
           </div>
           <div className="text-sm font-sans font-semibold mb-1">{selectedResource.label}</div>
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-[10px] text-muted-foreground mb-2">
             {selectedResource.kind === 'area' ? 'mapped area' : 'point feature'} · id {String(selectedResource.id)}
           </div>
+          <div className="rounded overflow-hidden border border-border/60">
+            <iframe
+              key={`${selectedResource.kind}-${selectedResource.id}`}
+              title="Satellite view"
+              className="w-full h-40 block"
+              style={{ border: 0 }}
+              loading="lazy"
+              src={`https://maps.google.com/maps?q=${selectedResource.lat},${selectedResource.lon}&t=k&z=16&output=embed`}
+            />
+          </div>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${selectedResource.lat},${selectedResource.lon}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-[10px] text-muted-foreground hover:text-foreground mt-1 text-right"
+          >
+            open in Google Maps ↗
+          </a>
         </div>
       )}
 
