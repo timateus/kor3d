@@ -3,7 +3,7 @@ import { useParams, Navigate, Link, useLocation } from 'react-router-dom';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import { Loader2, Layers, Waves, Crosshair, Mountain, ArrowRight, Copy, Check, Sliders, Eye, X, Info, Video, Plus, Trash2, Play, Circle, RotateCw, Snowflake, History } from 'lucide-react';
+import { Loader2, Layers, Waves, Crosshair, Mountain, ArrowRight, Copy, Check, Sliders, Eye, X, Info, Video, Plus, Trash2, Play, Circle, RotateCw, Snowflake, History, LayoutGrid } from 'lucide-react';
 import { findLocation, LOCATIONS } from '@/lib/locations';
 import { useMapterhornTerrain } from '@/hooks/useMapterhornTerrain';
 import { useTerrainMode } from '@/hooks/useTerrainMode';
@@ -74,6 +74,35 @@ function uvToCoord(
   const row = Math.max(0, Math.min(terrain.height - 1, Math.floor((1 - ny) * (terrain.height - 1))));
   const elev = terrain.elevations[row * terrain.width + col] ?? terrain.minElevation;
   return { lat, lon, elev };
+}
+
+/** Inverse of uvToCoord — maps a lon/lat back to scene (x, y, z), matching
+ * the mesh-space math every terrain-anchored layer (InaturalistLayer etc.)
+ * uses, so a computed point actually sits on the ground at that location. */
+function lonLatToScene(
+  lon: number,
+  lat: number,
+  terrain: import('@/lib/geotiff-loader').TerrainData,
+  bounds: import('@/lib/geotiff-loader').GeoBounds,
+  exaggeration: number,
+): [number, number, number] {
+  const meshW = 10;
+  const meshH = 10 * (terrain.height / terrain.width);
+  const elevRange = terrain.maxElevation - terrain.minElevation || 1;
+  const maxH = 10 * (exaggeration / 100);
+  const nx = (lon - bounds.minLon) / (bounds.maxLon - bounds.minLon);
+  const ny = (lat - bounds.minLat) / (bounds.maxLat - bounds.minLat);
+  const x = (nx - 0.5) * meshW;
+  const z = -((ny - 0.5) * meshH);
+  let y = 0.02;
+  if (nx >= 0 && nx <= 1 && ny >= 0 && ny <= 1) {
+    const cx = Math.min(terrain.width - 1, Math.max(0, Math.floor(nx * (terrain.width - 1))));
+    const cy = Math.min(terrain.height - 1, Math.max(0, Math.floor((1 - ny) * (terrain.height - 1))));
+    let e = terrain.elevations[cy * terrain.width + cx];
+    if (!isFinite(e)) e = terrain.minElevation;
+    y = ((e - terrain.minElevation) / elevRange) * maxH;
+  }
+  return [x, y, z];
 }
 
 function CameraProbe({ orbitRef, onChange }: { orbitRef: React.MutableRefObject<any>; onChange: (c: CameraInfo) => void }) {
@@ -326,6 +355,14 @@ export default function LocationPage() {
   const [flyDuration, setFlyDuration] = useState(8);
   const [isFlying, setIsFlying] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+
+  // Photo grid: full-screen iNaturalist gallery, clicking a photo flies the
+  // camera to that observation. Uses its own tiny FlyoverController instance
+  // (own keyframes/playing state) so it never touches the user-authored
+  // Flyover keyframes list above.
+  const [showInatGrid, setShowInatGrid] = useState(false);
+  const [gridFlyKeyframes, setGridFlyKeyframes] = useState<FlyKeyframe[]>([]);
+  const [isFlyingToGrid, setIsFlyingToGrid] = useState(false);
   const [exportAspect, setExportAspect] = useState<AspectKey>('landscape');
   const [exportSize, setExportSize] = useState<{ w: number; h: number } | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -450,6 +487,36 @@ export default function LocationPage() {
     const cam = cameraRef.current;
     if (!cam) return;
     setKeyframes(orbitKeyframes(cam.target, cam.distance, cam.tiltDeg, cam.headingDeg, 8));
+  };
+
+  // Grid → map: fly from wherever the camera currently is to hover over the
+  // clicked observation, keeping the current heading/tilt but capping
+  // distance so a far-zoomed-out view still reads as "zooming in", not just
+  // panning while staying tiny.
+  const flyToObservation = (o: InatObservation) => {
+    if (!terrain || !location) return;
+    const [tx, ty, tz] = lonLatToScene(o.lon, o.lat, terrain, location.bounds, exaggeration);
+    const cam = cameraRef.current;
+    const tiltDeg = cam ? Math.max(15, Math.min(80, cam.tiltDeg)) : 45;
+    const headingDeg = cam?.headingDeg ?? 0;
+    const distance = Math.min(cam?.distance ?? 3, 3);
+    const tiltRad = (tiltDeg * Math.PI) / 180;
+    const headingRad = (headingDeg * Math.PI) / 180;
+    const horiz = distance * Math.cos(tiltRad);
+    const dx = Math.sin(headingRad) * horiz;
+    const dz = -Math.cos(headingRad) * horiz;
+    const dy = distance * Math.sin(tiltRad);
+    const endPos: [number, number, number] = [tx + dx, ty + dy, tz + dz];
+    const endTarget: [number, number, number] = [tx, ty, tz];
+    const startPos = cam?.pos ?? endPos;
+    const startTarget = cam?.target ?? endTarget;
+    setGridFlyKeyframes([
+      { id: 'grid-start', pos: startPos, target: startTarget },
+      { id: 'grid-end', pos: endPos, target: endTarget },
+    ]);
+    setShowInatGrid(false);
+    selectInat(o, true);
+    setIsFlyingToGrid(true);
   };
 
   const playPreview = () => {
@@ -583,6 +650,7 @@ export default function LocationPage() {
         <CameraFarSync far={showBasinRivers ? basinFar : 300} />
         <RaycasterTuning />
         <FlyoverController keyframes={keyframes} playing={isFlying} duration={flyDuration} orbitRef={orbitRef} onDone={handleFlightDone} />
+        <FlyoverController keyframes={gridFlyKeyframes} playing={isFlyingToGrid} duration={1.8} orbitRef={orbitRef} onDone={() => setIsFlyingToGrid(false)} />
 
         {terrain && (
           <>
@@ -838,6 +906,48 @@ export default function LocationPage() {
             <div className="text-sm tech-font text-muted-foreground uppercase tracking-widest">
               Loading {location.label}…
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* iNaturalist photo grid — click a photo to fly the camera to it. */}
+      {showInatGrid && (
+        <div className="absolute inset-0 z-40 bg-background/97 backdrop-blur-md overflow-y-auto">
+          <div className="sticky top-0 flex items-center justify-between px-4 py-3 bg-background/90 backdrop-blur border-b border-border/60">
+            <div className="text-sm font-sans font-semibold">
+              iNaturalist observations
+              <span className="ml-2 text-xs text-muted-foreground font-mono">
+                {inatObs.filter((o) => o.photoUrl).length} photos
+              </span>
+            </div>
+            <button
+              onClick={() => setShowInatGrid(false)}
+              className="p-1.5 rounded border border-border/60 hover:bg-accent text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid gap-2 p-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
+            {inatObs.filter((o) => o.photoUrl).map((o) => (
+              <button
+                key={o.id}
+                onClick={() => flyToObservation(o)}
+                className="group relative aspect-square rounded-md overflow-hidden border border-border/60 hover:border-primary transition-colors"
+                title={`${o.commonName ?? o.species ?? 'Observation'} — click to fly there`}
+              >
+                <img
+                  src={o.photoUrl ?? ''}
+                  alt={o.commonName ?? o.species ?? 'iNaturalist observation'}
+                  loading="lazy"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                />
+                <div className="absolute inset-x-0 bottom-0 px-1.5 py-1 bg-gradient-to-t from-black/80 to-transparent">
+                  <div className="text-[11px] font-sans font-medium text-white leading-tight truncate">
+                    {o.commonName ?? o.species ?? 'Observation'}
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -1137,6 +1247,15 @@ export default function LocationPage() {
         >
           <Waves className="w-3.5 h-3.5" />
           {waterFlowActive ? 'Pouring…' : 'Water flow'}
+        </button>
+
+        <button
+          className={`${btnBase} ${showInatGrid ? 'text-primary border-primary/50' : ''}`}
+          onClick={() => setShowInatGrid((v) => !v)}
+          disabled={inatObs.length === 0}
+          title="Browse iNaturalist photos, click one to fly there"
+        >
+          <LayoutGrid className="w-3.5 h-3.5" /> Grid
         </button>
 
         {location.hasGlacierData && (
