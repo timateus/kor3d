@@ -43,6 +43,8 @@ interface Props {
   /** Optional pre-baked static JSON (raw Overpass output) — tried first, avoids depending on flaky live Overpass mirrors. */
   dataUrl?: string;
   onSelect?: (r: ResourceFeature | null) => void;
+  /** Fires with the full flattened feature list (points + area centroids) whenever the underlying data changes — lets a caller sample from it (e.g. an ambient carousel) without duplicating the fetch. */
+  onData?: (features: ResourceFeature[]) => void;
 }
 
 const CATEGORY_STYLE: Record<Category, { color: string; label: string }> = {
@@ -141,11 +143,33 @@ function glowTexture(): THREE.Texture {
   return _glowTex;
 }
 
-const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, dataUrl, onSelect }: Props) => {
+const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, dataUrl, onSelect, onData }: Props) => {
   const [data, setData] = useState<{ points: ResourcePoint[]; areas: ResourceArea[] } | null>(null);
   const clip = clipBounds ?? bounds;
   const { size } = useThree();
   const tex = glowTexture();
+
+  useEffect(() => {
+    if (!onData) return;
+    if (!data) { onData([]); return; }
+    const features: ResourceFeature[] = [
+      ...data.points.map((p): ResourceFeature => ({
+        id: p.id, category: p.category, categoryLabel: CATEGORY_STYLE[p.category].label,
+        label: p.label, kind: 'point', lat: p.lat, lon: p.lon,
+      })),
+      ...data.areas.map((a): ResourceFeature => {
+        let sumLon = 0, sumLat = 0;
+        for (const [lon, lat] of a.coords) { sumLon += lon; sumLat += lat; }
+        return {
+          id: a.id, category: a.category, categoryLabel: CATEGORY_STYLE[a.category].label,
+          label: a.label, kind: 'area', lat: sumLat / a.coords.length, lon: sumLon / a.coords.length,
+        };
+      }),
+    ];
+    onData(features);
+    // onData intentionally excluded: only the underlying data should trigger this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   useEffect(() => {
     if (!enabled) return;

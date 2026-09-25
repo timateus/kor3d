@@ -250,6 +250,7 @@ export default function LocationPage() {
   const [selectedCanal, setSelectedCanal] = useState<CanalFeature | null>(null);
   const [selectedReservoir, setSelectedReservoir] = useState<ReservoirFeature | null>(null);
   const [selectedResource, setSelectedResource] = useState<ResourceFeature | null>(null);
+  const [resourceObs, setResourceObs] = useState<ResourceFeature[]>([]);
   const [showMassBalance, setShowMassBalance] = useState(false);
   const [showIceThickness, setShowIceThickness] = useState(!!location?.hasIceThickness);
   const [thicknessInfo, setThicknessInfo] = useState<ThicknessInfo | null>(null);
@@ -332,6 +333,10 @@ export default function LocationPage() {
   // ambient auto-cycle slideshow below) — read by that auto-cycle so it
   // never swaps out an observation the user deliberately opened.
   const inatManualRef = useRef(false);
+  // Same idea as inatManualRef, but for a resource popup the ambient
+  // carousel opened on its own — a manual click on a resource marker sets
+  // this so the carousel doesn't swap it out while the user is reading it.
+  const resourceManualRef = useRef(false);
   // The various click-to-inspect popups (water, basin river, glacier, inat
   // observation, population sample) all render as fixed-position overlay
   // cards that can stack on top of each other. Selecting any one of them
@@ -345,6 +350,7 @@ export default function LocationPage() {
     setSelectedResource(null);
     setSelectedInat(null);
     inatManualRef.current = false;
+    resourceManualRef.current = false;
     setPopPoint(null);
   };
   const flowLoopRef = useRef<number | null>(null);
@@ -419,32 +425,55 @@ export default function LocationPage() {
     setSelectedInat(o);
   };
 
+  // Same wrapper as selectInat, for resource (mining/oil&gas/logging/
+  // industrial) markers — lets a manual click opt out of the ambient
+  // carousel the same way a manual iNat pick does.
+  const selectResource = (r: ResourceFeature | null, manual: boolean) => {
+    if (manual) {
+      lastUserInteractRef.current = Date.now();
+      closeAllPopups();
+    }
+    resourceManualRef.current = manual && r != null;
+    setSelectedResource(r);
+  };
+
   // Auto-cycle: an ambient slideshow that, after 5s with nothing selected,
-  // picks a random observation and keeps rotating every ~4s. It must not run
-  // while a *different* kind of popup (river/water/glacier/population/
-  // resource/canal/reservoir) is open — that's `otherPopupOpen`, checked
-  // once per effect run — and each
-  // tick must not clobber a *manually* selected observation the user is
-  // currently reading (`inatManualRef`) — checked live inside pickRandom, not
-  // via the effect deps, since the ambient picks it makes itself shouldn't
-  // trigger a teardown/restart of its own loop.
-  const otherPopupOpen = !!(selectedWater || selectedBasinRiver || selectedGlacier || popPoint || selectedResource || selectedCanal || selectedReservoir);
+  // picks a random iNat observation *or* resource marker from the combined
+  // pool and keeps rotating every ~4s. It must not run while a *different*
+  // kind of popup (river/water/glacier/population/canal/reservoir) is open —
+  // that's `otherPopupOpen`, checked once per effect run — and each tick
+  // must not clobber a *manually* selected card the user is currently
+  // reading (`inatManualRef`/`resourceManualRef`) — checked live inside
+  // pickRandom, not via the effect deps, since the ambient picks it makes
+  // itself shouldn't trigger a teardown/restart of its own loop.
+  const otherPopupOpen = !!(selectedWater || selectedBasinRiver || selectedGlacier || popPoint || selectedCanal || selectedReservoir);
   useEffect(() => {
-    if (inatObs.length === 0 || otherPopupOpen) return;
+    if ((inatObs.length === 0 && resourceObs.length === 0) || otherPopupOpen) return;
     let cancelled = false;
     let cycleTimer: number | null = null;
 
     const pickRandom = () => {
-      if (cancelled || inatObs.length === 0 || inatManualRef.current) return;
+      if (cancelled || inatManualRef.current || resourceManualRef.current) return;
       const idle = Date.now() - lastUserInteractRef.current;
       if (idle < 5000) return;
-      const next = inatObs[Math.floor(Math.random() * inatObs.length)];
-      setSelectedInat(next);
+      const pool: ({ kind: 'inat'; item: InatObservation } | { kind: 'resource'; item: ResourceFeature })[] = [
+        ...inatObs.map((o) => ({ kind: 'inat' as const, item: o })),
+        ...resourceObs.map((r) => ({ kind: 'resource' as const, item: r })),
+      ];
+      if (pool.length === 0) return;
+      const next = pool[Math.floor(Math.random() * pool.length)];
+      if (next.kind === 'inat') {
+        setSelectedResource(null);
+        setSelectedInat(next.item);
+      } else {
+        setSelectedInat(null);
+        setSelectedResource(next.item);
+      }
     };
 
     const check = () => {
       if (cancelled) return;
-      if (!inatManualRef.current) {
+      if (!inatManualRef.current && !resourceManualRef.current) {
         const idle = Date.now() - lastUserInteractRef.current;
         if (idle >= 5000) pickRandom();
       }
@@ -456,7 +485,7 @@ export default function LocationPage() {
       cancelled = true;
       if (cycleTimer) clearTimeout(cycleTimer);
     };
-  }, [inatObs, otherPopupOpen]);
+  }, [inatObs, resourceObs, otherPopupOpen]);
 
   // Preload observation images into the browser cache so cycling is instant.
   useEffect(() => {
@@ -864,7 +893,8 @@ export default function LocationPage() {
               clipBounds={location.waterBounds ?? location.bounds}
               enabled={showResources}
               dataUrl={`${dataBase}/resources.json`}
-              onSelect={(r) => { closeAllPopups(); setSelectedResource(r); }}
+              onSelect={(r) => selectResource(r, true)}
+              onData={setResourceObs}
             />
             {/* Pipelines — reuses the generic line layer. */}
             <OsmLinesLayer
@@ -1447,7 +1477,7 @@ export default function LocationPage() {
         <div className="absolute top-16 right-3 w-72 p-3 rounded-md bg-background/90 backdrop-blur border border-border/60 text-xs font-mono z-10">
           <div className="flex items-center justify-between mb-2">
             <span className="uppercase tracking-widest text-[10px] text-primary">{selectedResource.categoryLabel}</span>
-            <button onClick={() => setSelectedResource(null)} className="text-muted-foreground hover:text-foreground">
+            <button onClick={() => selectResource(null, true)} className="text-muted-foreground hover:text-foreground">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
