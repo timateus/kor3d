@@ -6,6 +6,7 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { useThree } from '@react-three/fiber';
 import type { GeoBounds, TerrainData } from '@/lib/geotiff-loader';
 import { fetchOverpass } from '@/lib/overpass';
+import { decimateCoords, demStepDeg } from '@/lib/simplify';
 
 interface LineFeature {
   id: number | string;
@@ -103,10 +104,11 @@ const OsmLinesLayer = ({
 
     const g = new THREE.Group();
     const disposables: { geom: LineGeometry; mat: LineMaterial }[] = [];
+    const step = demStepDeg(bounds, terrain.width);
 
     for (const f of features) {
       const positions: number[] = [];
-      for (const [lon, lat] of f.coords) {
+      for (const [lon, lat] of decimateCoords(f.coords, step)) {
         const nxT = (lon - bounds.minLon) / (bounds.maxLon - bounds.minLon);
         const nyT = (lat - bounds.minLat) / (bounds.maxLat - bounds.minLat);
         const x = (nxT - 0.5) * meshW;

@@ -17,6 +17,11 @@ export const LOCATIONS = [
     waterBounds: { minLat: 42.96, maxLat: 43.52, minLon: 76.62, maxLon: 77.28 },
   },
   {
+    slug: 'gorny-gigant',
+    bounds: { minLat: 43.1993, maxLat: 43.2302, minLon: 76.9323, maxLon: 76.9737 },
+    waterBounds: { minLat: 42.96, maxLat: 43.52, minLon: 76.62, maxLon: 77.28 },
+  },
+  {
     slug: 'tuyuksu-glacier',
     bounds: { minLat: 43.0213, maxLat: 43.0753, minLon: 77.0436, maxLon: 77.1176 },
     waterBounds: { minLat: 42.8681, maxLat: 43.2285, minLon: 76.8342, maxLon: 77.3270 },
@@ -55,6 +60,13 @@ export const LOCATIONS = [
     slug: 'barsakelmes',
     bounds: { minLat: 43.00, maxLat: 43.70, minLon: 56.80, maxLon: 58.55 },
     waterBounds: { minLat: 42.70, maxLat: 44.00, minLon: 56.45, maxLon: 58.90 },
+  },
+  {
+    slug: 'chu-river',
+    bounds: { minLat: 41.70, maxLat: 45.85, minLon: 67.25, maxLon: 77.35 },
+    waterBounds: { minLat: 41.50, maxLat: 46.05, minLon: 66.95, maxLon: 77.65 },
+    // Basin-scale bbox (~1000×500 km): unrestricted water returns 60+ MB. See fetchWater's `coarse`.
+    coarse: true,
   },
   {
     slug: 'garibaldi-squamish',

@@ -147,6 +147,18 @@ async function fetchResources(b) {
   return overpass(q);
 }
 
+// Roads for basin-scale (`coarse`) locations: the live in-browser Overpass
+// query for the full highway set is unusable at this size, so prefetch only
+// the through-roads (motorway/trunk/primary/secondary) to roads.json.
+async function fetchRoadsMajor(b) {
+  const q = `[out:json][timeout:80];
+    (
+      way["highway"~"^(motorway|trunk|primary|secondary)$"](${bbox(b)});
+    );
+    out geom;`;
+  return overpass(q);
+}
+
 // Overpass `out geom` includes a per-way `nodes` (raw node-id list) and
 // `bounds` that no renderer reads (they only use `geometry`/`tags`/`lat`/`lon`)
 // — stripping them, plus rounding coordinates to ~11cm precision, cuts every
@@ -185,6 +197,8 @@ async function main() {
   const args = process.argv.slice(2);
   const bordersOnly = args.includes('--borders-only');
   const resourcesOnly = args.includes('--resources-only');
+  const roadsOnly = args.includes('--roads-only');
+  const skipWater = args.includes('--skip-water'); // keep existing water*.json (e.g. when Overpass can't serve the big bbox)
   const requested = args.filter((a) => !a.startsWith('--'));
   const targets = requested.length
     ? LOCATIONS.filter((l) => requested.includes(l.slug))
@@ -194,6 +208,13 @@ async function main() {
     console.log(`\n[${loc.slug}]`);
     const outDir = path.join('public/data/locations', loc.slug);
     const coarse = !!loc.coarse;
+
+    if (roadsOnly) {
+      console.log('  roads (major)…');
+      const roads = await fetchRoadsMajor(loc.waterBounds ?? loc.bounds);
+      await writeJson(path.join(outDir, 'roads.json'), roads);
+      continue;
+    }
 
     if (resourcesOnly) {
       console.log('  resources (mining/oil & gas/logging/industrial)…');
@@ -213,11 +234,13 @@ async function main() {
       continue;
     }
 
+    if (!skipWater) {
     console.log('  water (small)…');
     const waterSmall = await fetchWater(loc.bounds, coarse);
     await writeJson(path.join(outDir, 'water.json'), waterSmall);
+    }
 
-    if (loc.waterBounds) {
+    if (loc.waterBounds && !skipWater) {
       console.log('  water (large)…');
       const waterLarge = await fetchWater(loc.waterBounds, coarse);
       await writeJson(path.join(outDir, 'water_large.json'), waterLarge);

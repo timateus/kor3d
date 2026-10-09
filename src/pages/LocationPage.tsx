@@ -3,7 +3,7 @@ import { useParams, Navigate, Link, useLocation } from 'react-router-dom';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import { Loader2, Layers, Waves, Crosshair, Mountain, ArrowRight, Copy, Check, Sliders, Eye, X, Info, Video, Plus, Trash2, Play, Circle, RotateCw, Snowflake, History, LayoutGrid } from 'lucide-react';
+import { Loader2, Layers, Waves, Crosshair, Mountain, ArrowRight, Copy, Check, Sliders, Eye, X, Info, Video, Plus, Trash2, Play, Circle, RotateCw, Snowflake, History, LayoutGrid, PanelTopClose, PanelTopOpen } from 'lucide-react';
 import { findLocation, LOCATIONS } from '@/lib/locations';
 import { useMapterhornTerrain } from '@/hooks/useMapterhornTerrain';
 import { useTerrainMode } from '@/hooks/useTerrainMode';
@@ -17,6 +17,7 @@ import OsmPopulationLayer from '@/components/location/OsmPopulationLayer';
 import OsmPlacesLayer from '@/components/location/OsmPlacesLayer';
 import OsmLinesLayer from '@/components/location/OsmLinesLayer';
 import ResourcesLayer, { type ResourceFeature } from '@/components/location/ResourcesLayer';
+import { LayerFade } from '@/lib/layerFade';
 import OsmBuildingsLayer from '@/components/location/OsmBuildingsLayer';
 import InaturalistLayer, { type InatObservation } from '@/components/location/InaturalistLayer';
 import GlacierOutlineLayer, { type GlacierFeatureProps, type ThicknessInfo } from '@/components/location/GlacierOutlineLayer';
@@ -216,6 +217,37 @@ function Slider({ label, value, min, max, step = 1, onChange, format }: {
   );
 }
 
+function LayerRow({ checked, onChecked, value, onValue, max = 3, children }: {
+  checked: boolean; onChecked: (v: boolean) => void; value: number; onValue: (v: number) => void;
+  max?: number; children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <DropdownMenuCheckboxItem
+        checked={checked}
+        onCheckedChange={(v) => onChecked(!!v)}
+        onSelect={(e) => e.preventDefault()}
+      >
+        {children}
+      </DropdownMenuCheckboxItem>
+      <div
+        className={`flex items-center gap-2 pl-8 pr-2 pb-1.5 -mt-0.5 text-[10px] ${checked ? '' : 'opacity-40'}`}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <span className="text-muted-foreground w-12 shrink-0">Intensity</span>
+        <input
+          type="range" min={0} max={max} step={0.05} value={value}
+          onChange={(e) => onValue(parseFloat(e.target.value))}
+          onDoubleClick={() => onValue(1)}
+          className="flex-1 h-3"
+          title="Double-click to reset"
+        />
+        <span className="font-mono w-8 text-right">{value.toFixed(2)}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function LocationPage() {
   const params = useParams<{ slug?: string }>();
   const routerLoc = useLocation();
@@ -234,10 +266,11 @@ export default function LocationPage() {
     setExaggeration(location?.exaggeration ?? 50);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location?.slug]);
+  const [hideMenu, setHideMenu] = useState(false);
   const [showInspector, setShowInspector] = useState(false);
   const [showTerrain, setShowTerrain] = useState(true);
   const [showWater, setShowWater] = useState(true);
-  const [showLakes, setShowLakes] = useState(false);
+  const [showLakes, setShowLakes] = useState(true);
   const [showPopulation, setShowPopulation] = useState(true);
   const [showPlaces, setShowPlaces] = useState(true);
   const [showOsmBuildings, setShowOsmBuildings] = useState(false);
@@ -245,6 +278,7 @@ export default function LocationPage() {
   const [showBorders, setShowBorders] = useState(false);
   const [showResources, setShowResources] = useState(false);
   const [showBasinRivers, setShowBasinRivers] = useState(true);
+  const [showBasinBorder, setShowBasinBorder] = useState(!!location?.highlightBasin);
   const [basinSceneRadius, setBasinSceneRadius] = useState<number | null>(null);
   const [showGlacier, setShowGlacier] = useState(!!location?.hasGlacierData);
   const [selectedGlacier, setSelectedGlacier] = useState<GlacierFeatureProps | null>(null);
@@ -297,6 +331,34 @@ export default function LocationPage() {
   // Population heatmap
   const [popOpacity, setPopOpacity] = useState(0.75);
   const [popIntensity, setPopIntensity] = useState(1);
+  // Per-layer "intensity" (opacity multiplier) shown next to each layer in the
+  // Layers menu. Population keeps its own heatmap intensity (popIntensity).
+  const [intensity, setIntensities] = useState<Record<string, number>>({});
+  const iv = (k: string) => intensity[k] ?? 1;
+  const intensityKey = `kor3d:layer-intensity:${location?.slug}`;
+  const intensityLoaded = useRef<string | null>(null);
+  // Intensities are per location: load on slug change, save on edit.
+  useEffect(() => {
+    let saved: Record<string, number> = {};
+    try { saved = JSON.parse(localStorage.getItem(intensityKey) ?? '{}'); } catch { /* ignore */ }
+    const { population, ...rest } = saved;
+    setIntensities(rest);
+    setPopIntensity(typeof population === 'number' ? population : 1);
+    intensityLoaded.current = intensityKey;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intensityKey]);
+  useEffect(() => {
+    if (intensityLoaded.current !== intensityKey) return;
+    try { localStorage.setItem(intensityKey, JSON.stringify({ ...intensity, population: popIntensity })); } catch { /* ignore */ }
+  }, [intensity, popIntensity, intensityKey]);
+  const copyIntensityJson = () => {
+    const keys = ['water','lakes','basinRivers','basinBorder','buildings','glacier','canals','inat','population','places','roads','borders','resources'];
+    const all: Record<string, number> = { ...intensity, population: popIntensity };
+    const out: Record<string, number> = {};
+    for (const k of keys) out[k] = +(all[k] ?? 1).toFixed(2);
+    copyText(JSON.stringify({ location: location?.slug, intensity: out }, null, 2));
+  };
+  const setIv = (k: string, v: number) => setIntensities((m) => ({ ...m, [k]: v }));
 
   const [waterFlowActive, setWaterFlowActive] = useState(false);
   const [flowState, setFlowState] = useState<WaterFlowState | null>(null);
@@ -340,6 +402,9 @@ export default function LocationPage() {
   // carousel opened on its own — a manual click on a resource marker sets
   // this so the carousel doesn't swap it out while the user is reading it.
   const resourceManualRef = useRef(false);
+  // Latched once the user closes an iNat/resource card — the ambient
+  // slideshow stays off from then on.
+  const slideshowOffRef = useRef(false);
   // The various click-to-inspect popups (water, basin river, glacier, inat
   // observation, population sample) all render as fixed-position overlay
   // cards that can stack on top of each other. Selecting any one of them
@@ -426,6 +491,7 @@ export default function LocationPage() {
       closeAllPopups();
     }
     inatManualRef.current = manual && o != null;
+    if (manual && o == null) slideshowOffRef.current = true;
     setSelectedInat(o);
   };
 
@@ -438,6 +504,7 @@ export default function LocationPage() {
       closeAllPopups();
     }
     resourceManualRef.current = manual && r != null;
+    if (manual && r == null) slideshowOffRef.current = true;
     setSelectedResource(r);
   };
 
@@ -457,7 +524,7 @@ export default function LocationPage() {
     let cycleTimer: number | null = null;
 
     const pickRandom = () => {
-      if (cancelled || inatManualRef.current || resourceManualRef.current) return;
+      if (cancelled || slideshowOffRef.current || inatManualRef.current || resourceManualRef.current) return;
       const idle = Date.now() - lastUserInteractRef.current;
       if (idle < 5000) return;
       const pool: ({ kind: 'inat'; item: InatObservation } | { kind: 'resource'; item: ResourceFeature })[] = [
@@ -477,7 +544,7 @@ export default function LocationPage() {
 
     const check = () => {
       if (cancelled) return;
-      if (!inatManualRef.current && !resourceManualRef.current) {
+      if (!slideshowOffRef.current && !inatManualRef.current && !resourceManualRef.current) {
         const idle = Date.now() - lastUserInteractRef.current;
         if (idle >= 5000) pickRandom();
       }
@@ -679,7 +746,7 @@ export default function LocationPage() {
         } : undefined}
       >
       <Canvas
-        camera={{ position: [-4.2, 4.2, -1.9], fov: 45, near: 0.1, far: showBasinRivers ? basinFar : 300 }}
+        camera={{ position: [-4.2, 4.2, -1.9], fov: 45, near: 0.02, far: showBasinRivers ? basinFar : 300 }}
         shadows={false}
         gl={{ preserveDrawingBuffer: true }}
         onCreated={(state) => { rendererRef.current = state.gl; }}
@@ -693,7 +760,7 @@ export default function LocationPage() {
           ref={orbitRef}
           enableDamping
           dampingFactor={0.06}
-          minDistance={1.5}
+          minDistance={0.15}
           maxDistance={showBasinRivers ? basinMaxDistance : 110}
           maxPolarAngle={Math.PI / 2.05}
           mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }}
@@ -765,7 +832,8 @@ export default function LocationPage() {
               meshInterval={meshInterval}
               bounds={location.bounds}
             />
-            {showWater && (
+            <LayerFade intensity={iv('water')}>
+{showWater && (
               <OsmWaterwaysLayer
                 terrain={terrain}
                 exaggeration={exaggeration}
@@ -776,7 +844,9 @@ export default function LocationPage() {
                 onLoaded={() => setWaterLoaded(true)}
               />
             )}
-            {showLakes && (
+</LayerFade>
+            <LayerFade intensity={iv('lakes')}>
+{showLakes && (
               <LakesLayer
                 terrain={terrain}
                 exaggeration={exaggeration}
@@ -787,7 +857,8 @@ export default function LocationPage() {
                 onSelect={(f) => { closeAllPopups(); setSelectedLake(f); }}
               />
             )}
-            {showBasinRivers && (
+</LayerFade>
+            {(showBasinRivers || showBasinBorder) && (
               <HydroBasinLayer
                 terrain={terrain}
                 exaggeration={exaggeration}
@@ -797,14 +868,22 @@ export default function LocationPage() {
                 colorBy={basinColorBy}
                 dischargeScale={basinDischargeScale}
                 minOrder={basinMinOrder}
+                showRivers={showBasinRivers}
+                showBoundary={showBasinBorder || !location.highlightBasin}
+                highlightBoundary={showBasinBorder && !!location.highlightBasin}
+                riversIntensity={iv('basinRivers')}
+                boundaryIntensity={iv('basinBorder')}
                 onExtent={setBasinSceneRadius}
                 onSelect={(f) => { closeAllPopups(); setSelectedBasinRiver(f); }}
               />
             )}
-            {showOsmBuildings && (
+            <LayerFade intensity={iv('buildings')}>
+{showOsmBuildings && (
               <OsmBuildingsLayer terrain={terrain} exaggeration={exaggeration} bounds={location.bounds} dataUrl={`${dataBase}/buildings.json`} />
             )}
-            {showGlacier && location.hasGlacierData && (
+</LayerFade>
+            <LayerFade intensity={iv('glacier')}>
+{showGlacier && location.hasGlacierData && (
               <GlacierOutlineLayer
                 terrain={terrain}
                 exaggeration={exaggeration}
@@ -815,6 +894,7 @@ export default function LocationPage() {
                 onThickness={setThicknessInfo}
               />
             )}
+</LayerFade>
             {showRetreat && location.hasGlacierData && (
               <GlacierRetreatLayer
                 terrain={terrain}
@@ -824,7 +904,8 @@ export default function LocationPage() {
                 retreatMeters={retreatMeters}
               />
             )}
-            {showCanals && location.hasCanalData && (
+            <LayerFade intensity={iv('canals')}>
+{showCanals && location.hasCanalData && (
               <IrrigationCanalsLayer
                 terrain={terrain}
                 exaggeration={exaggeration}
@@ -834,7 +915,9 @@ export default function LocationPage() {
                 onSelectReservoir={(r) => { closeAllPopups(); setSelectedReservoir(r); }}
               />
             )}
-            {showInat && (
+</LayerFade>
+            <LayerFade intensity={iv('inat')}>
+{showInat && (
               <InaturalistLayer
                 terrain={terrain}
                 exaggeration={exaggeration}
@@ -845,6 +928,7 @@ export default function LocationPage() {
                 onObservationsLoaded={setInatObs}
               />
             )}
+</LayerFade>
             {showPopulation && (
               <OsmPopulationLayer
                 terrain={terrain}
@@ -856,7 +940,8 @@ export default function LocationPage() {
                 onSettled={() => setPopLoaded(true)}
               />
             )}
-            {showPlaces && (
+            
+{showPlaces && (
               <OsmPlacesLayer
                 terrain={terrain}
                 exaggeration={exaggeration}
@@ -864,16 +949,20 @@ export default function LocationPage() {
                 dataUrl={`${dataBase}/places.json`}
                 queryBounds={location.waterBounds ?? location.bounds}
                 onLoaded={() => setPlacesLoaded(true)}
+                intensity={iv('places')}
               />
             )}
-            <OsmLinesLayer
+
+            <LayerFade intensity={iv('roads')}>
+<OsmLinesLayer
               terrain={terrain}
               exaggeration={exaggeration}
               bounds={location.bounds}
               clipBounds={location.waterBounds ?? location.bounds}
               enabled={showRoads}
               cacheKey="osm-roads"
-              color="#e8b04b"
+              dataUrl={`${dataBase}/roads.json`}
+              color="#ffffff"
               opacity={0.65}
               lineWidth={1.1}
               buildQuery={(bbox) => `[out:json][timeout:60];
@@ -882,7 +971,9 @@ export default function LocationPage() {
                 );
                 out geom;`}
             />
-            {/* National borders — the only ones drawn at full visibility. */}
+</LayerFade>
+            <LayerFade intensity={iv('borders')}>
+{/* National borders only. */}
             <OsmLinesLayer
               terrain={terrain}
               exaggeration={exaggeration}
@@ -900,25 +991,9 @@ export default function LocationPage() {
                 );
                 out geom;`}
             />
-            {/* Sub-national (region/district) borders — kept, but nearly transparent. */}
-            <OsmLinesLayer
-              terrain={terrain}
-              exaggeration={exaggeration}
-              bounds={location.bounds}
-              clipBounds={location.waterBounds ?? location.bounds}
-              enabled={showBorders}
-              cacheKey="osm-borders-sub"
-              dataUrl={`${dataBase}/borders_sub.json`}
-              color="#e05fd0"
-              opacity={0.08}
-              lineWidth={1}
-              buildQuery={(bbox) => `[out:json][timeout:60];
-                (
-                  relation["boundary"="administrative"]["admin_level"~"^(3|4|5|6)$"](${bbox});
-                );
-                out geom;`}
-            />
-            {/* Resource extraction: mining/quarries, oil & gas, logging, industrial areas. */}
+            </LayerFade>
+            <LayerFade intensity={iv('resources')}>
+{/* Resource extraction: mining/quarries, oil & gas, logging, industrial areas. */}
             <ResourcesLayer
               terrain={terrain}
               exaggeration={exaggeration}
@@ -926,6 +1001,7 @@ export default function LocationPage() {
               clipBounds={location.waterBounds ?? location.bounds}
               enabled={showResources}
               dataUrl={`${dataBase}/resources.json`}
+              selectedKey={selectedResource ? `${selectedResource.kind}-${selectedResource.id}` : null}
               onSelect={(r) => selectResource(r, true)}
               onData={setResourceObs}
             />
@@ -946,6 +1022,7 @@ export default function LocationPage() {
                 );
                 out geom;`}
             />
+</LayerFade>
 
             {flowState && (
               <WaterFlowOverlay
@@ -1088,29 +1165,43 @@ export default function LocationPage() {
 
       {/* Toolbar */}
       <div className="absolute top-3 right-3 flex items-center gap-2">
+        <button
+          onClick={() => setHideMenu((h) => !h)}
+          className={`${btnBase} order-last`}
+          title={hideMenu ? 'Show menu' : 'Hide menu'}
+        >
+          {hideMenu ? <PanelTopOpen className="w-3.5 h-3.5" /> : <PanelTopClose className="w-3.5 h-3.5" />}
+          {hideMenu ? null : 'Hide'}
+        </button>
+        {!hideMenu && (<>
         {/* Layers */}
         <DropdownMenu>
           <DropdownMenuTrigger className={btnBase}>
             <Layers className="w-3.5 h-3.5" /> Layers
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-72">
             <DropdownMenuLabel>Overlays</DropdownMenuLabel>
-            <DropdownMenuCheckboxItem checked={showWater} onCheckedChange={(v) => setShowWater(!!v)}>
+            <LayerRow checked={showWater} onChecked={setShowWater} value={iv('water')} onValue={(v) => setIv('water', v)}>
               Water
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem checked={showLakes} onCheckedChange={(v) => setShowLakes(!!v)}>
+            </LayerRow>
+            <LayerRow checked={showLakes} onChecked={setShowLakes} value={iv('lakes')} onValue={(v) => setIv('lakes', v)}>
               Lakes (natural &amp; artificial)
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem checked={showBasinRivers} onCheckedChange={(v) => setShowBasinRivers(!!v)}>
+            </LayerRow>
+            <LayerRow checked={showBasinRivers} onChecked={setShowBasinRivers} value={iv('basinRivers')} onValue={(v) => setIv('basinRivers', v)}>
               Basin rivers (HydroSHEDS)
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem checked={showOsmBuildings} onCheckedChange={(v) => setShowOsmBuildings(!!v)}>
+            </LayerRow>
+            {location.highlightBasin && (
+              <LayerRow checked={showBasinBorder} onChecked={setShowBasinBorder} value={iv('basinBorder')} onValue={(v) => setIv('basinBorder', v)}>
+                Basin border
+              </LayerRow>
+            )}
+            <LayerRow checked={showOsmBuildings} onChecked={setShowOsmBuildings} value={iv('buildings')} onValue={(v) => setIv('buildings', v)}>
               Buildings
-            </DropdownMenuCheckboxItem>
+            </LayerRow>
             {location.hasGlacierData && (
-              <DropdownMenuCheckboxItem checked={showGlacier} onCheckedChange={(v) => setShowGlacier(!!v)}>
+              <LayerRow checked={showGlacier} onChecked={setShowGlacier} value={iv('glacier')} onValue={(v) => setIv('glacier', v)}>
                 Glacier extent (GLIMS)
-              </DropdownMenuCheckboxItem>
+              </LayerRow>
             )}
             {location.hasGlacierData && location.hasIceThickness && (
               <DropdownMenuCheckboxItem checked={showIceThickness} onCheckedChange={(v) => setShowIceThickness(!!v)}>
@@ -1118,30 +1209,34 @@ export default function LocationPage() {
               </DropdownMenuCheckboxItem>
             )}
             {location.hasCanalData && (
-              <DropdownMenuCheckboxItem checked={showCanals} onCheckedChange={(v) => setShowCanals(!!v)}>
+              <LayerRow checked={showCanals} onChecked={setShowCanals} value={iv('canals')} onValue={(v) => setIv('canals', v)}>
                 Irrigation canals &amp; reservoirs (ICWC)
-              </DropdownMenuCheckboxItem>
+              </LayerRow>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem checked={showInat} onCheckedChange={(v) => setShowInat(!!v)}>
+            <LayerRow checked={showInat} onChecked={setShowInat} value={iv('inat')} onValue={(v) => setIv('inat', v)}>
               iNaturalist observations
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem checked={showPopulation} onCheckedChange={(v) => setShowPopulation(!!v)}>
+            </LayerRow>
+            <LayerRow checked={showPopulation} onChecked={setShowPopulation} value={popIntensity} onValue={setPopIntensity} max={4}>
               Population density
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem checked={showPlaces} onCheckedChange={(v) => setShowPlaces(!!v)}>
+            </LayerRow>
+            <LayerRow checked={showPlaces} onChecked={setShowPlaces} value={iv('places')} onValue={(v) => setIv('places', v)}>
               Towns & villages
-            </DropdownMenuCheckboxItem>
+            </LayerRow>
             <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem checked={showRoads} onCheckedChange={(v) => setShowRoads(!!v)}>
+            <LayerRow checked={showRoads} onChecked={setShowRoads} value={iv('roads')} onValue={(v) => setIv('roads', v)}>
               Roads
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem checked={showBorders} onCheckedChange={(v) => setShowBorders(!!v)}>
+            </LayerRow>
+            <LayerRow checked={showBorders} onChecked={setShowBorders} value={iv('borders')} onValue={(v) => setIv('borders', v)}>
               Borders
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem checked={showResources} onCheckedChange={(v) => setShowResources(!!v)}>
+            </LayerRow>
+            <LayerRow checked={showResources} onChecked={setShowResources} value={iv('resources')} onValue={(v) => setIv('resources', v)}>
               Resources (mining / oil & gas / logging)
-            </DropdownMenuCheckboxItem>
+            </LayerRow>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); copyIntensityJson(); }}>
+              {copied?.startsWith('{') ? 'Copied intensity JSON ✓' : 'Copy intensity values as JSON'}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -1226,8 +1321,6 @@ export default function LocationPage() {
             <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground pt-2">Population heatmap (GHS-POP)</div>
             <Slider label="Opacity" value={popOpacity} min={0} max={1} step={0.02}
               onChange={setPopOpacity} format={(v) => v.toFixed(2)} />
-            <Slider label="Intensity" value={popIntensity} min={0.1} max={4} step={0.05}
-              onChange={setPopIntensity} format={(v) => v.toFixed(2)} />
 
             {showBasinRivers && (
               <>
@@ -1407,6 +1500,7 @@ export default function LocationPage() {
         >
           <Info className="w-3.5 h-3.5" /> Inspector
         </button>
+        </>)}
       </div>
 
       {/* Population density value at clicked point */}

@@ -5,6 +5,7 @@ import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { useThree } from '@react-three/fiber';
 import type { GeoBounds, TerrainData } from '@/lib/geotiff-loader';
+import { decimateCoords, demStepDeg } from '@/lib/simplify';
 
 export interface WaterFeature {
   id: number | string;
@@ -102,6 +103,7 @@ const OsmWaterwaysLayer = ({ terrain, exaggeration, bounds, clipBounds, dataUrl,
 
     const positions: number[] = [];
     const segmentFeature: WaterFeature[] = [];
+    const step = demStepDeg(bounds, terrain.width);
 
     for (const f of features) {
       // clip test against wider bounds
@@ -114,7 +116,7 @@ const OsmWaterwaysLayer = ({ terrain, exaggeration, bounds, clipBounds, dataUrl,
       if (!anyInClip) continue;
 
       const pts: number[][] = [];
-      for (const [lon, lat] of f.coords) {
+      for (const [lon, lat] of decimateCoords(f.coords, step)) {
         const nxT = (lon - bounds.minLon) / (bounds.maxLon - bounds.minLon);
         const nyT = (lat - bounds.minLat) / (bounds.maxLat - bounds.minLat);
         const x = (nxT - 0.5) * meshW;

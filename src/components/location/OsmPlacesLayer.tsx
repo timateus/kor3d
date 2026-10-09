@@ -14,6 +14,8 @@ interface Props {
   queryBounds?: GeoBounds;
   /** Fires once loading settles (success or failure). */
   onLoaded?: () => void;
+  /** Label size multiplier. */
+  intensity?: number;
 }
 
 interface Place {
@@ -39,13 +41,34 @@ const KIND_STYLE: Record<Place['kind'], {
   hamlet:  { color: '#a7b1bd', size: 0.016, distFactor: 2.8, fontSize: 8,  minSepDeg: 0.06, uppercase: false, weight: 400 },
 };
 
+// Labels mix English, Russian, Kazakh and Kyrgyz names depending on what OSM
+// has tagged (Latin and Cyrillic side by side reads as a mess), so anything
+// without a name:en is transliterated to Latin.
+const CYR: Record<string, string> = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l',
+  м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh',
+  щ: 'shch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+  ү: 'u', ө: 'o', ң: 'ng', қ: 'q', ғ: 'g', һ: 'h', ә: 'a', і: 'i', ұ: 'u',
+};
+function toLatin(name: string): string {
+  if (!/[\u0400-\u04FF]/.test(name)) return name;
+  let out = '';
+  for (const ch of name) {
+    const lower = ch.toLowerCase();
+    const t = CYR[lower];
+    if (t === undefined) { out += ch; continue; }
+    out += ch !== lower ? t.charAt(0).toUpperCase() + t.slice(1) : t;
+  }
+  return out;
+}
+
 function parsePlaces(json: any): Place[] {
   return (json.elements || [])
     .filter((el: any) => el.type === 'node' && el.tags?.name && el.tags?.place)
     .map((el: any) => {
       const popRaw = el.tags?.population;
       const pop = popRaw ? parseInt(String(popRaw).replace(/[^\d]/g, ''), 10) : NaN;
-      const name: string = el.tags['name:en'] || el.tags['name:ru'] || el.tags['name:kk'] || el.tags.name;
+      const name: string = el.tags['name:en'] || toLatin(el.tags['name:ru'] || el.tags['name:kk'] || el.tags.name);
       return {
         name,
         lat: el.lat,
@@ -75,7 +98,7 @@ async function fetchPlacesStatic(url: string): Promise<Place[]> {
   return parsePlaces(await res.json());
 }
 
-export default function OsmPlacesLayer({ terrain, exaggeration, bounds, dataUrl, queryBounds, onLoaded }: Props) {
+export default function OsmPlacesLayer({ terrain, exaggeration, bounds, dataUrl, queryBounds, onLoaded, intensity = 1 }: Props) {
   const [places, setPlaces] = useState<Place[]>([]);
 
   useEffect(() => {
@@ -117,9 +140,14 @@ export default function OsmPlacesLayer({ terrain, exaggeration, bounds, dataUrl,
       if (o !== 0) return o;
       return (b.population || 0) - (a.population || 0);
     });
+    // minSepDeg is tuned for small (≲2°) maps; on basin-scale maps scale it up
+    // with the span so labels stay readable, and drop hamlets entirely.
+    const span = Math.max(bounds.maxLon - bounds.minLon, bounds.maxLat - bounds.minLat);
+    const sepScale = Math.max(1, span / 3);
     const kept: Place[] = [];
     for (const p of inside) {
-      const sep = KIND_STYLE[p.kind].minSepDeg;
+      if (sepScale > 2 && p.kind === 'hamlet') continue;
+      const sep = KIND_STYLE[p.kind].minSepDeg * sepScale;
       if (sep > 0) {
         const tooClose = kept.some((k) => {
           const dLat = k.lat - p.lat;
@@ -150,28 +178,18 @@ export default function OsmPlacesLayer({ terrain, exaggeration, bounds, dataUrl,
         const s = KIND_STYLE[m.kind];
         return (
           <group key={`${m.name}-${i}`} position={m.pos}>
-            {/* Halo */}
-            <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[s.size * 1.6, s.size * 2.4, 24]} />
-              <meshBasicMaterial color={s.color} transparent opacity={0.25} depthWrite={false} />
-            </mesh>
-            {/* Marker dot */}
-            <mesh position={[0, 0.05, 0]}>
-              <sphereGeometry args={[s.size, 14, 14]} />
-              <meshStandardMaterial color={s.color} emissive={s.color} emissiveIntensity={0.6} />
-            </mesh>
             {/* Label */}
             <Html
               center
               distanceFactor={s.distFactor}
-              position={[0, s.size + 0.12, 0]}
+              position={[0, 0.08, 0]}
               zIndexRange={[80, 0]}
               style={{ pointerEvents: 'none', userSelect: 'none' }}
             >
               <div
                 style={{
                   fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                  fontSize: `${s.fontSize}px`,
+                  fontSize: `${s.fontSize * intensity}px`,
                   fontWeight: s.weight,
                   letterSpacing: s.uppercase ? '0.12em' : '0.04em',
                   textTransform: s.uppercase ? 'uppercase' : 'none',

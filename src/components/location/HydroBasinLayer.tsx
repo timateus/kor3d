@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import * as THREE from 'three';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { useThree } from '@react-three/fiber';
 import type { GeoBounds, TerrainData } from '@/lib/geotiff-loader';
+import { decimateCoords, demStepDeg } from '@/lib/simplify';
+import { useLayerFade } from '@/lib/layerFade';
 
 /**
  * Renders the *entire drainage basin* a location sits in — HydroSHEDS
@@ -27,6 +29,8 @@ export interface RiverFeature {
 }
 
 interface Props {
+  riversIntensity?: number;
+  boundaryIntensity?: number;
   exaggeration: number;
   /** Terrain bounds — used to map lon/lat to mesh coords (same reference as other layers). */
   bounds: GeoBounds;
@@ -48,6 +52,12 @@ interface Props {
    * file (which is already filtered at fetch time via --min-stra) — lets
    * you declutter further without re-running the prefetch script. */
   minOrder: number;
+  /** Draw the river network (default true). */
+  showRivers?: boolean;
+  /** Draw the watershed outline (default true). */
+  showBoundary?: boolean;
+  /** Draw the outline as a bright, thick border instead of a faint guide line. */
+  highlightBoundary?: boolean;
   onLoaded?: () => void;
   onSelect?: (river: RiverFeature | null) => void;
   /** Fires with the farthest scene-space distance any basin point sits from
@@ -98,11 +108,13 @@ function opacityForDischarge(norm: number): number {
 }
 
 const HydroBasinLayer = ({
-  exaggeration, bounds, terrain, riversUrl, boundaryUrl, colorBy, dischargeScale, minOrder, onLoaded, onSelect, onExtent,
+  exaggeration, bounds, terrain, riversUrl, boundaryUrl, colorBy, dischargeScale, minOrder, showRivers = true, showBoundary = true, highlightBoundary = false,
+  riversIntensity = 1, boundaryIntensity = 1, onLoaded, onSelect, onExtent,
 }: Props) => {
   const [rivers, setRivers] = useState<GeoJSON.FeatureCollection<GeoJSON.LineString, RiverFeature> | null>(null);
   const [boundary, setBoundary] = useState<GeoJSON.FeatureCollection | null>(null);
   const { size } = useThree();
+  const fadeRef = useRef<THREE.Group>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -121,6 +133,19 @@ const HydroBasinLayer = ({
     const maxHeight = 10 * (exaggeration / 100);
     const lift = Math.max(0.008, maxHeight * 0.004);
 
+    const elevRange = terrain.maxElevation - terrain.minElevation || 1;
+    const step = demStepDeg(bounds, terrain.width);
+    // Follow the DEM where the point lies on the terrain (HydroSHEDS data can
+    // extend past it, where we fall back to the flat base plane).
+    const sampleY = (nxT: number, nyT: number, extraLift: number) => {
+      if (nxT < 0 || nxT > 1 || nyT < 0 || nyT > 1) return lift;
+      const cx = Math.max(0, Math.min(terrain.width - 1, Math.floor(nxT * (terrain.width - 1))));
+      const cy = Math.max(0, Math.min(terrain.height - 1, Math.floor((1 - nyT) * (terrain.height - 1))));
+      let e = terrain.elevations[cy * terrain.width + cx];
+      if (!isFinite(e)) e = terrain.minElevation;
+      return ((e - terrain.minElevation) / elevRange) * maxHeight + lift + extraLift;
+    };
+
     const toXZ = (lon: number, lat: number): [number, number] => {
       const nxT = (lon - bounds.minLon) / (bounds.maxLon - bounds.minLon);
       const nyT = (lat - bounds.minLat) / (bounds.maxLat - bounds.minLat);
@@ -133,20 +158,22 @@ const HydroBasinLayer = ({
 
     const addLine = (
       coords: [number, number][], color: number, width: number, opacity: number, order: number,
-      userData?: Record<string, unknown>,
+      userData?: Record<string, unknown>, extraLift = 0, depthTest = true,
     ) => {
       if (coords.length < 2) return;
       const positions: number[] = [];
-      for (const [lon, lat] of coords) {
+      for (const [lon, lat] of decimateCoords(coords, step)) {
         const [x, z] = toXZ(lon, lat);
-        positions.push(x, lift, z);
+        const nxT = (lon - bounds.minLon) / (bounds.maxLon - bounds.minLon);
+        const nyT = (lat - bounds.minLat) / (bounds.maxLat - bounds.minLat);
+        positions.push(x, sampleY(nxT, nyT, extraLift), z);
         const d = Math.hypot(x, z);
         if (d > maxDistFromOrigin) maxDistFromOrigin = d;
       }
       const geom = new LineGeometry();
       geom.setPositions(new Float32Array(positions));
       const mat = new LineMaterial({
-        color, linewidth: width, transparent: true, opacity, depthTest: true,
+        color, linewidth: width, transparent: true, opacity, depthTest,
         resolution: new THREE.Vector2(size.width, size.height),
       });
       const line = new Line2(geom, mat);
@@ -163,7 +190,7 @@ const HydroBasinLayer = ({
       ? rivers.features.reduce((m, f) => Math.max(m, f.properties?.dis_av_cms ?? 0), 1)
       : 1;
 
-    for (const f of rivers.features) {
+    for (const f of showRivers ? rivers.features : []) {
       if (f.geometry?.type !== 'LineString') continue;
       const p = f.properties ?? ({} as RiverFeature);
       if ((p.ord_stra ?? 0) < minOrder) continue;
@@ -181,22 +208,56 @@ const HydroBasinLayer = ({
       addLine(f.geometry.coordinates as [number, number][], color, width, opacity, 1, { river: p });
     }
 
-    const boundaryColor = new THREE.Color('#c4b5fd').getHex();
+    const boundaryColor = new THREE.Color(highlightBoundary ? '#ffd23f' : '#c4b5fd').getHex();
     const ringsOf = (geom: GeoJSON.Geometry): [number, number][][] => {
       if (geom.type === 'Polygon') return geom.coordinates as [number, number][][];
       if (geom.type === 'MultiPolygon') return (geom.coordinates as [number, number][][][]).flat();
       return [];
     };
-    for (const f of boundary.features) {
-      if (!f.geometry) continue;
-      for (const ring of ringsOf(f.geometry)) {
-        addLine(ring, boundaryColor, 1, 0.3, 0);
+    // With several sub-basin polygons, shared interior edges would be drawn
+    // too — only a problem for the highlighted outline, which should trace the
+    // basin's outer edge. Interior edges appear twice (once per neighbour), so
+    // for the highlight we draw only edges seen once.
+    const outline = (feats: GeoJSON.Feature[]): [number, number][][] => {
+      const key = (a: [number, number], b: [number, number]) => {
+        const ka = `${a[0].toFixed(5)},${a[1].toFixed(5)}`;
+        const kb = `${b[0].toFixed(5)},${b[1].toFixed(5)}`;
+        return ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+      };
+      const rings = feats.flatMap((f) => (f.geometry ? ringsOf(f.geometry) : []));
+      const count = new Map<string, number>();
+      for (const r of rings) for (let i = 0; i < r.length - 1; i++) count.set(key(r[i], r[i + 1]), (count.get(key(r[i], r[i + 1])) ?? 0) + 1);
+      const runs: [number, number][][] = [];
+      for (const r of rings) {
+        let run: [number, number][] = [];
+        for (let i = 0; i < r.length - 1; i++) {
+          if (count.get(key(r[i], r[i + 1])) === 1) {
+            if (run.length === 0) run.push(r[i]);
+            run.push(r[i + 1]);
+          } else if (run.length) { runs.push(run); run = []; }
+        }
+        if (run.length) runs.push(run);
+      }
+      return runs;
+    };
+    if (showBoundary) {
+      if (highlightBoundary) {
+        // Soft wide halo under a crisp core, both always on top of the terrain.
+        for (const run of outline(boundary.features)) {
+          addLine(run, boundaryColor, 7, 0.25, 3, undefined, 0.01, false);
+          addLine(run, boundaryColor, 2.6, 1, 4, undefined, 0.012, false);
+        }
+      } else {
+        for (const f of boundary.features) {
+          if (!f.geometry) continue;
+          for (const ring of ringsOf(f.geometry)) addLine(ring, boundaryColor, 1, 0.3, 0);
+        }
       }
     }
 
     (g.userData as any).__disposables = disposables;
     return { group: g, sceneRadius: maxDistFromOrigin };
-  }, [rivers, boundary, terrain, exaggeration, bounds, colorBy, dischargeScale, minOrder, size.width, size.height]);
+  }, [rivers, boundary, terrain, exaggeration, bounds, colorBy, dischargeScale, minOrder, showRivers, showBoundary, highlightBoundary, size.width, size.height]);
 
   useEffect(() => {
     if (sceneRadius > 0) onExtent?.(sceneRadius);
@@ -209,8 +270,12 @@ const HydroBasinLayer = ({
     if (d) for (const { geom, mat } of d) { geom.dispose(); mat.dispose(); }
   }, [group]);
 
+  useLayerFade(fadeRef as RefObject<THREE.Object3D>, riversIntensity, (o) => !!o.userData?.river);
+  useLayerFade(fadeRef as RefObject<THREE.Object3D>, boundaryIntensity, (o) => !o.userData?.river);
+
   if (!group) return null;
   return (
+    <group ref={fadeRef}>
     <primitive
       object={group}
       onClick={(e: any) => {
@@ -222,6 +287,7 @@ const HydroBasinLayer = ({
       }}
       onPointerOut={() => { document.body.style.cursor = ''; }}
     />
+    </group>
   );
 };
 

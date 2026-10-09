@@ -1,3 +1,4 @@
+import SelectionRing from './SelectionRing';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -301,6 +302,7 @@ const InaturalistLayer = ({
       {/* Selected point: blue glow (halo + core) */}
       {highlightGeom && (
         <>
+          {highlight && <SelectionRing position={highlight.pos} color="#7fd0ff" />}
           <points geometry={highlightGeom} raycast={noRaycast}>
             <pointsMaterial
               size={0.9} map={dotTex} color="#3ba7ff" transparent depthWrite={false}

@@ -1,3 +1,4 @@
+import SelectionRing from './SelectionRing';
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
@@ -60,6 +61,8 @@ interface Props {
   /** Optional pre-baked static JSON (raw Overpass output) — tried first, avoids depending on flaky live Overpass mirrors. */
   dataUrl?: string;
   onSelect?: (r: ResourceFeature | null) => void;
+  /** `${kind}-${id}` of the currently selected feature. */
+  selectedKey?: string | null;
   /** Fires with the full flattened feature list (points + area centroids) whenever the underlying data changes — lets a caller sample from it (e.g. an ambient carousel) without duplicating the fetch. */
   onData?: (features: ResourceFeature[]) => void;
 }
@@ -168,7 +171,7 @@ function glowTexture(): THREE.Texture {
   return _glowTex;
 }
 
-const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, dataUrl, onSelect, onData }: Props) => {
+const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, dataUrl, onSelect, onData, selectedKey }: Props) => {
   const [data, setData] = useState<{ points: ResourcePoint[]; areas: ResourceArea[] } | null>(null);
   const clip = clipBounds ?? bounds;
   const { size } = useThree();
@@ -283,7 +286,14 @@ const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, da
         linewidth: 1.6, transparent: true, opacity: 0.85, depthTest: true,
         resolution: new THREE.Vector2(size.width, size.height),
       });
+      let radius = 0.08;
+      const [cx, cz] = toXZ(sumLon / a.coords.length, sumLat / a.coords.length);
+      for (const [lon, lat] of a.coords) {
+        const [px, pz] = toXZ(lon, lat);
+        radius = Math.max(radius, Math.hypot(px - cx, pz - cz));
+      }
       return {
+        cx, cz, radius,
         id: a.id, category: a.category, label: a.label, subtype: a.subtype, geo, y: cy, outlineGeom, outlineMat,
         lat: sumLat / a.coords.length, lon: sumLon / a.coords.length,
       };
@@ -319,6 +329,23 @@ const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, da
             />
           </mesh>
           <primitive object={new Line2(p.outlineGeom, p.outlineMat)} />
+          {/* generous invisible hit-target — the flat fill is mostly buried by sloping terrain */}
+          <mesh
+            visible={false}
+            position={[p.cx, p.y, p.cz]}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect?.({ id: p.id, category: p.category, categoryLabel: CATEGORY_STYLE[p.category].label, label: p.label, subtype: p.subtype, kind: 'area', lat: p.lat, lon: p.lon, imageUrl: resourceSatelliteUrl(p.lat, p.lon) });
+            }}
+            onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
+            onPointerOut={() => { document.body.style.cursor = ''; }}
+          >
+            <sphereGeometry args={[p.radius * 1.3, 10, 8]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+          {selectedKey === `area-${p.id}` && (
+            <SelectionRing position={[p.cx, p.y + 0.01, p.cz]} color={CATEGORY_STYLE[p.category].color} size={0.09} />
+          )}
         </group>
       ))}
       {markers.map((m) => {
@@ -343,9 +370,10 @@ const ResourcesLayer = ({ terrain, exaggeration, bounds, clipBounds, enabled, da
             <sprite position={[0, 0.001, 0]} scale={[0.07, 0.07, 1]}>
               <spriteMaterial map={tex} color={color} transparent opacity={0.95} depthWrite={false} sizeAttenuation />
             </sprite>
+            {selectedKey === `point-${m.id}` && <SelectionRing position={[0, 0.01, 0]} color={s.color} size={0.07} />}
             {/* invisible larger hit-target so the glow is easy to click */}
             <mesh visible={false}>
-              <sphereGeometry args={[0.06, 8, 8]} />
+              <sphereGeometry args={[0.09, 8, 8]} />
               <meshBasicMaterial transparent opacity={0} />
             </mesh>
           </group>

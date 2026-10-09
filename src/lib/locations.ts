@@ -15,6 +15,8 @@ export interface LocationDef {
   waterBounds?: GeoBounds;
   /** Optional default vertical exaggeration (1–30). */
   exaggeration?: number;
+  /** Draw this location's HydroSHEDS basin outline as a bright border (basin_boundary.json). */
+  highlightBasin?: boolean;
   /** Has glacier_outline.json (GLIMS) + mass_balance.json (WGMS FoG) in its data folder. */
   hasGlacierData?: boolean;
   /** Has ice_thickness.json/.bin (Farinotti et al. 2019 consensus estimate) in its data folder. */
@@ -74,6 +76,25 @@ export const LOCATIONS: LocationDef[] = [
       maxLat: 43.256,
       minLon: 76.925,
       maxLon: 76.975,
+    },
+    waterBounds: {
+      minLat: 42.96, maxLat: 43.52,
+      minLon: 76.62, maxLon: 77.28,
+    },
+    exaggeration: 30,
+  },
+  {
+    // Горный Гигант — hillside suburb of Almaty (Medeu district), OSM
+    // place=suburb boundary (way 1487361883) spans lat 43.2029–43.2266,
+    // lon 76.9371–76.9690; bounds below pad that ~15% on every side.
+    slug: 'gorny-gigant',
+    label: 'Gorny Gigant',
+    center: { lat: (43.1993 + 43.2302) / 2, lon: (76.9323 + 76.9737) / 2 },
+    bounds: {
+      minLat: 43.1993,
+      maxLat: 43.2302,
+      minLon: 76.9323,
+      maxLon: 76.9737,
     },
     waterBounds: {
       minLat: 42.96, maxLat: 43.52,
@@ -230,6 +251,26 @@ export const LOCATIONS: LocationDef[] = [
       minLon: 56.45, maxLon: 58.90,
     },
     exaggeration: 10,
+  },
+  {
+    // Chu (Shu) River basin — ~75,000 km² endorheic basin shared by
+    // Kyrgyzstan and Kazakhstan. Rises in the Tian Shan (Kochkor/Boom Gorge),
+    // runs through the Chuy Valley past Bishkek and Tokmok, crosses the
+    // Moiynkum desert in Zhambyl Region and dies in the Akzhaykyn sink
+    // before reaching the Syr Darya. Bounds follow the HydroBASINS outline.
+    slug: 'chu-river',
+    label: 'Chu (Shu) River',
+    center: { lat: 43.775, lon: 72.30 },
+    bounds: {
+      minLat: 41.70, maxLat: 45.85,
+      minLon: 67.25, maxLon: 77.35,
+    },
+    waterBounds: {
+      minLat: 41.50, maxLat: 46.05,
+      minLon: 66.95, maxLon: 77.65,
+    },
+    exaggeration: 15,
+    highlightBasin: true,
   },
   {
     // Garibaldi Provincial Park & Squamish — Coast Mountains, BC, Canada.
