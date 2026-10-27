@@ -1,0 +1,351 @@
+{
+ "type": "FeatureCollection",
+ "metadata": {
+  "title": "Almaty Superski master plan (Kok-Zhailau), approximate trace",
+  "source": "Kazakh Tourism Development, master plan slide 'Генеральный план горнолыжного курорта «Almaty Superski»' (60 km pistes, 16 lifts, opening planned 2028). Copy: plan.webp",
+  "method": "The plan is an oblique illustration (south at top) without coordinates. Stations were placed by their position relative to landmarks drawn on the plan (Medeu, Mountain Kumbel, Three Brothers Rocks, Kumbeltau range, Kokzhailau plateau, road to Almaty) and then moved to the nearest terrain at the elevation printed on the plan, using the Mapterhorn z12 DEM (checked against OSM peak heights to within ±15 m). Lifts are straight lines between stations. Pistes are not traced. The base village sits on the Kok-Zhailau meadow, confirmed by the OSM track and bus No. 5 terminus; the 1450 m station is west of it, toward the city.",
+  "accuracy": "high: within ~200 m; medium: within ~500 m; low: may be off by 1 km or more. No published georeferenced plan or EIA coordinates were found (October 2026).",
+  "traced": "2026-10-28 (village, 2980, 2750 and 1450 m stations corrected)"
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     77.056,
+     43.1586
+    ]
+   },
+   "properties": {
+    "kind": "station",
+    "id": "medeu",
+    "name": "Medeu",
+    "planElevation": null,
+    "demElevation": 1700,
+    "confidence": "medium",
+    "note": "Plan shows the L1 gondola starting at Medeu; no height given."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     77.0,
+     43.14
+    ]
+   },
+   "properties": {
+    "kind": "village",
+    "id": "village",
+    "name": "Base village · Kokzhailau plateau",
+    "planElevation": 1951,
+    "demElevation": 2206,
+    "confidence": "medium",
+    "note": "On the Kok-Zhailau meadow (zhailau), the broad flat pasture at 2200–2260 m where the track and bus No. 5 from Almaty end (43.1425, 77.0042). The plan prints 1951 m; the meadow is ~2200 m."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     77.0227,
+     43.1222
+    ]
+   },
+   "properties": {
+    "kind": "station",
+    "id": "s2980",
+    "name": "2980 m station",
+    "planElevation": 2980,
+    "demElevation": 2981,
+    "confidence": "medium",
+    "note": "Top of the main gondola on the ridge from Three Brothers (2860 m) to Құмбел (3221 m), below 'Mountain Kumbel 3250 m'."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     77.0424,
+     43.129
+    ]
+   },
+   "properties": {
+    "kind": "station",
+    "id": "s2675",
+    "name": "2675 m station",
+    "planElevation": 2675,
+    "demElevation": 2678,
+    "confidence": "low",
+    "note": "East (Medeu) side, top of the L4 chair."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     77.0129,
+     43.114
+    ]
+   },
+   "properties": {
+    "kind": "station",
+    "id": "s2750",
+    "name": "2750 m station",
+    "planElevation": 2750,
+    "demElevation": 2748,
+    "confidence": "low",
+    "note": "Below the upper bowl, above Three Brothers Rocks."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     77.0103,
+     43.1053
+    ]
+   },
+   "properties": {
+    "kind": "station",
+    "id": "hub",
+    "name": "Upper bowl hub",
+    "planElevation": null,
+    "demElevation": 3000,
+    "confidence": "low",
+    "note": "Unlabelled junction in the upper bowl; height assumed ~3000 m."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     77.022,
+     43.0988
+    ]
+   },
+   "properties": {
+    "kind": "station",
+    "id": "s3400",
+    "name": "3400 m station",
+    "planElevation": 3400,
+    "demElevation": 3400,
+    "confidence": "medium",
+    "note": "Highest top station, below 'Kumbel 3500 m'; next to OSM Терешкова 3435 m."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     77.0043,
+     43.0969
+    ]
+   },
+   "properties": {
+    "kind": "station",
+    "id": "s3252",
+    "name": "3252 m station",
+    "planElevation": 3252,
+    "demElevation": 3250,
+    "confidence": "medium",
+    "note": "West top station; next to OSM Романтик 3250 m."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     76.9531,
+     43.1485
+    ]
+   },
+   "properties": {
+    "kind": "station",
+    "id": "s1450",
+    "name": "1450 m station",
+    "planElevation": 1450,
+    "demElevation": 1452,
+    "confidence": "low",
+    "note": "Lowest station, west of the village toward Almaty ('road to Almaty city' on the plan); valley floor at 1450 m with a track from the city side."
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      77.056,
+      43.1586
+     ],
+     [
+      77.0,
+      43.14
+     ]
+    ]
+   },
+   "properties": {
+    "kind": "lift",
+    "name": "L1 gondola",
+    "lift": "gondola",
+    "from": "medeu",
+    "to": "village",
+    "confidence": "medium"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      77.0,
+      43.14
+     ],
+     [
+      77.0227,
+      43.1222
+     ]
+    ]
+   },
+   "properties": {
+    "kind": "lift",
+    "name": "Main gondola",
+    "lift": "gondola",
+    "from": "village",
+    "to": "s2980",
+    "confidence": "medium"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      77.0,
+      43.14
+     ],
+     [
+      77.0424,
+      43.129
+     ]
+    ]
+   },
+   "properties": {
+    "kind": "lift",
+    "name": "L4 chair",
+    "lift": "chair_lift",
+    "from": "village",
+    "to": "s2675",
+    "confidence": "low"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      77.0227,
+      43.1222
+     ],
+     [
+      77.0103,
+      43.1053
+     ]
+    ]
+   },
+   "properties": {
+    "kind": "lift",
+    "name": "L10 gondola",
+    "lift": "gondola",
+    "from": "s2980",
+    "to": "hub",
+    "confidence": "low"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      77.0103,
+      43.1053
+     ],
+     [
+      77.022,
+      43.0988
+     ]
+    ]
+   },
+   "properties": {
+    "kind": "lift",
+    "name": "Upper lift to 3400 m",
+    "lift": "gondola",
+    "from": "hub",
+    "to": "s3400",
+    "confidence": "low"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      77.0129,
+      43.114
+     ],
+     [
+      77.0043,
+      43.0969
+     ]
+    ]
+   },
+   "properties": {
+    "kind": "lift",
+    "name": "L14 chair",
+    "lift": "chair_lift",
+    "from": "s2750",
+    "to": "s3252",
+    "confidence": "low"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      77.0,
+      43.14
+     ],
+     [
+      76.9531,
+      43.1485
+     ]
+    ]
+   },
+   "properties": {
+    "kind": "lift",
+    "name": "L6 chair",
+    "lift": "chair_lift",
+    "from": "village",
+    "to": "s1450",
+    "confidence": "low"
+   }
+  }
+ ]
+}

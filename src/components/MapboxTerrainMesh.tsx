@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
-import { TerrainData } from '@/lib/geotiff-loader';
+import { Bvh } from '@react-three/drei';
+import { TerrainData, type GeoBounds } from '@/lib/geotiff-loader';
+import type { EmbeddingRaster } from '@/lib/satellite-embeddings';
 import { loadBaseStyleTexture, type BaseStyle } from '@/lib/mapbox-tiles';
 import { useVisualMode } from '@/lib/visual-mode';
 import { useTerrainMode } from '@/hooks/useTerrainMode';
 
 interface Props {
+  embeddingRaster?: EmbeddingRaster | null;
+  embeddingSecondRaster?: EmbeddingRaster | null;
+  embeddingSplit?: number | null;
+  embeddingOpacity?: number;
+  embeddingBounds?: GeoBounds;
+  selectionTexture?: THREE.DataTexture | null;
   terrain: TerrainData;
   exaggeration: number;
   token: string;
@@ -25,10 +33,23 @@ interface Props {
   wireframe?: boolean;
 }
 
+function makeEmbeddingTexture(raster?: EmbeddingRaster | null) {
+  if (!raster) return null;
+  const texture = new THREE.DataTexture(new Uint8Array(raster.rgba.buffer), raster.width, raster.height, THREE.RGBAFormat);
+  texture.flipY = true;
+  // This terrain shader writes display RGB directly (no output colour-space chunk).
+  texture.colorSpace = THREE.NoColorSpace;
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 const MapboxTerrainMesh = ({
   terrain, exaggeration, token, onError, onLoadingChange, baseStyleOverride,
   brightness = 1, contrast = 1, saturation = 1, gamma = 1,
   tint = '#ffffff', tintStrength = 0, wireframe = false,
+  embeddingRaster, embeddingSecondRaster, embeddingSplit = null, embeddingOpacity = 0.8, embeddingBounds, selectionTexture,
 }: Props) => {
   const [satellite, setSatellite] = useState<THREE.Texture | null>(null);
   const [mode] = useVisualMode();
@@ -87,14 +108,23 @@ const MapboxTerrainMesh = ({
   const material = useMemo(() => new THREE.ShaderMaterial({
     uniforms: {
       uSatellite: { value: null },
+      uEmbedding: { value: null },
+      uEmbeddingSecond: { value: null },
+      uHasSecond: { value: 0 },
+      uSwipeEdge: { value: 0 },
+      uSelection: { value: null },
+      uHasEmbedding: { value: 0 },
+      uHasSelection: { value: 0 },
+      uEmbeddingOpacity: { value: 0 },
+      uEmbeddingUv: { value: new THREE.Vector4(1, 1, 0, 0) },
       uMirage: { value: 0 },
       uHasTex: { value: 0 },
-      uBrightness: { value: brightness },
-      uContrast: { value: contrast },
-      uSaturation: { value: saturation },
-      uGamma: { value: gamma },
-      uTint: { value: new THREE.Color(tint) },
-      uTintStrength: { value: tintStrength },
+      uBrightness: { value: 1 },
+      uContrast: { value: 1 },
+      uSaturation: { value: 1 },
+      uGamma: { value: 1 },
+      uTint: { value: new THREE.Color('#ffffff') },
+      uTintStrength: { value: 0 },
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -105,6 +135,15 @@ const MapboxTerrainMesh = ({
     `,
     fragmentShader: /* glsl */ `
       uniform sampler2D uSatellite;
+      uniform sampler2D uEmbedding;
+      uniform sampler2D uEmbeddingSecond;
+      uniform float uHasSecond;
+      uniform float uSwipeEdge;
+      uniform sampler2D uSelection;
+      uniform float uHasEmbedding;
+      uniform float uHasSelection;
+      uniform float uEmbeddingOpacity;
+      uniform vec4 uEmbeddingUv;
       uniform float uMirage;
       uniform float uHasTex;
       uniform float uBrightness;
@@ -131,6 +170,18 @@ const MapboxTerrainMesh = ({
           vec3 desat = mix(col, vec3(g), 0.35);
           col = desat * vec3(1.05, 1.0, 0.92);
         }
+        vec2 embeddingUv = vUv * uEmbeddingUv.xy + uEmbeddingUv.zw;
+        if (all(greaterThanEqual(embeddingUv, vec2(0.0))) && all(lessThanEqual(embeddingUv, vec2(1.0)))) {
+          if (uHasEmbedding > 0.5) {
+            vec4 embedding = texture2D(uEmbedding, embeddingUv);
+            if (uHasSecond > 0.5 && gl_FragCoord.x >= uSwipeEdge) embedding = texture2D(uEmbeddingSecond, embeddingUv);
+            col = mix(col, embedding.rgb, embedding.a * uEmbeddingOpacity);
+          }
+          if (uHasSelection > 0.5) {
+            vec4 selection = texture2D(uSelection, embeddingUv);
+            col = mix(col, selection.rgb, selection.a);
+          }
+        }
         gl_FragColor = vec4(col, 1.0);
       }
     `,
@@ -149,6 +200,26 @@ const MapboxTerrainMesh = ({
     material.uniforms.uHasTex.value = satellite ? 1 : 0;
     material.needsUpdate = true;
   }, [satellite, material]);
+
+  const embeddingTexture = useMemo(() => makeEmbeddingTexture(embeddingRaster), [embeddingRaster]);
+  const secondTexture = useMemo(() => makeEmbeddingTexture(embeddingSecondRaster), [embeddingSecondRaster]);
+  const drawingSize = useMemo(() => new THREE.Vector2(), []);
+  useEffect(() => () => secondTexture?.dispose(), [secondTexture]);
+  useEffect(() => () => embeddingTexture?.dispose(), [embeddingTexture]);
+  useEffect(() => {
+    material.uniforms.uEmbedding.value = embeddingTexture;
+    material.uniforms.uEmbeddingSecond.value = secondTexture;
+    material.uniforms.uHasSecond.value = secondTexture && embeddingSplit !== null ? 1 : 0;
+    material.uniforms.uHasEmbedding.value = embeddingTexture ? 1 : 0;
+    material.uniforms.uEmbeddingOpacity.value = embeddingOpacity;
+    material.uniforms.uSelection.value = selectionTexture;
+    material.uniforms.uHasSelection.value = selectionTexture ? 1 : 0;
+    const b = embeddingBounds ?? embeddingRaster?.bounds;
+    const t = terrain.bounds;
+    if (b && t) material.uniforms.uEmbeddingUv.value.set(
+      (t.maxLon - t.minLon) / (b.maxLon - b.minLon), (t.maxLat - t.minLat) / (b.maxLat - b.minLat),
+      (t.minLon - b.minLon) / (b.maxLon - b.minLon), (t.minLat - b.minLat) / (b.maxLat - b.minLat));
+  }, [material, embeddingTexture, secondTexture, embeddingSplit, embeddingOpacity, selectionTexture, embeddingBounds, embeddingRaster?.bounds, terrain.bounds]);
 
   // Skirt: opaque vertical sides + base cap, so terrain looks like a solid block
   const skirt = useMemo(() => {
@@ -212,9 +283,18 @@ const MapboxTerrainMesh = ({
     color: '#f5efe1', roughness: 0.95, metalness: 0, side: THREE.DoubleSide,
   }), []);
 
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => skirt.dispose(), [skirt]);
+  useEffect(() => () => material.dispose(), [material]);
+  useEffect(() => () => skirtMaterial.dispose(), [skirtMaterial]);
+
   return (
     <group rotation={[-Math.PI / 2, 0, 0]}>
-      <mesh geometry={geometry} material={material} userData={{ terrainSurface: true }} />
+      <Bvh key={geometry.uuid} firstHitOnly strategy={0}>
+        <mesh geometry={geometry} material={material} userData={{ terrainSurface: true }} onBeforeRender={renderer => {
+          if (embeddingSplit !== null) material.uniforms.uSwipeEdge.value = renderer.getDrawingBufferSize(drawingSize).x * embeddingSplit;
+        }} />
+      </Bvh>
       <mesh geometry={skirt} material={skirtMaterial} />
       {wireframe && (
         <mesh geometry={geometry}>

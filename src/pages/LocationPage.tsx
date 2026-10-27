@@ -1,9 +1,10 @@
+import { useEmbeddingTimeline } from '@/hooks/useEmbeddingTimeline';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, Navigate, Link, useLocation } from 'react-router-dom';
+import { useParams, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, Line } from '@react-three/drei';
 import * as THREE from 'three';
-import { Loader2, Layers, Waves, Crosshair, Mountain, ArrowRight, Copy, Check, Sliders, Eye, X, Info, Video, Plus, Trash2, Play, Circle, RotateCw, Snowflake, History, LayoutGrid, PanelTopClose, PanelTopOpen } from 'lucide-react';
+import { Loader2, Layers, Waves, Crosshair, Mountain, ArrowRight, Copy, Check, Sliders, Eye, X, Info, Video, Plus, Trash2, Play, Circle, RotateCw, Snowflake, History, LayoutGrid, PanelTopClose, PanelTopOpen, Layers3 } from 'lucide-react';
 import { findLocation, LOCATIONS } from '@/lib/locations';
 import { useMapterhornTerrain } from '@/hooks/useMapterhornTerrain';
 import { useTerrainMode } from '@/hooks/useTerrainMode';
@@ -14,17 +15,31 @@ import LakesLayer, { type LakeFeature } from '@/components/location/LakesLayer';
 import HydroBasinLayer from '@/components/location/HydroBasinLayer';
 import IrrigationCanalsLayer, { type CanalFeature, type ReservoirFeature } from '@/components/location/IrrigationCanalsLayer';
 import OsmPopulationLayer from '@/components/location/OsmPopulationLayer';
+import SatelliteEmbeddingPanel from '@/components/location/SatelliteEmbeddingPanel';
+import SentinelChangePanel from '@/components/location/SentinelChangePanel';
+import PeaksLayer from '@/components/location/PeaksLayer';
+import MasterPlanLayer from '@/components/location/MasterPlanLayer';
+import SkiLayer from '@/components/location/SkiLayer';
+import { useSatelliteEmbeddings } from '@/hooks/useSatelliteEmbeddings';
+import { useSentinelChange } from '@/hooks/useSentinelChange';
+import { useEmbeddingBrush } from '@/hooks/useEmbeddingBrush';
+import { useEmbeddingSearch } from '@/hooks/useEmbeddingSearch';
+import { readEmbeddingArrival, type EmbeddingMatch } from '@/lib/embedding-search';
 import OsmPlacesLayer from '@/components/location/OsmPlacesLayer';
 import OsmLinesLayer from '@/components/location/OsmLinesLayer';
 import ResourcesLayer, { type ResourceFeature } from '@/components/location/ResourcesLayer';
 import { LayerFade } from '@/lib/layerFade';
+import { ExplodedStack, StackSlice } from '@/components/location/ExplodedStack';
 import OsmBuildingsLayer from '@/components/location/OsmBuildingsLayer';
 import InaturalistLayer, { type InatObservation } from '@/components/location/InaturalistLayer';
 import GlacierOutlineLayer, { type GlacierFeatureProps, type ThicknessInfo } from '@/components/location/GlacierOutlineLayer';
 import GlacierChartPanel from '@/components/location/GlacierChartPanel';
+import WaterBalancePanel from '@/components/location/WaterBalancePanel';
+import { loadShoreline, shorelineRaster, type ShorelineGrid } from '@/lib/lake-shoreline';
 import GlacierRetreatLayer from '@/components/location/GlacierRetreatLayer';
 import GlacierRetreatPanel from '@/components/location/GlacierRetreatPanel';
 import FlyoverController from '@/components/location/FlyoverController';
+import SelectionRing from '@/components/location/SelectionRing';
 import { type FlyKeyframe, orbitKeyframes, ASPECTS, type AspectKey } from '@/lib/flyover';
 import type { PopulationGrid } from '@/lib/population-density';
 import { sampleGrid } from '@/lib/population-density';
@@ -149,6 +164,81 @@ function CameraFarSync({ far }: { far: number }) {
   return null;
 }
 
+export interface RenderMarker { lon: number; lat: number; color?: string; size?: number }
+export interface RenderPath { coords: [number, number][]; progress: number; color?: string; width?: number }
+
+/** A route drawn on the terrain up to `progress` (0–1 of its length), with a
+ * ring riding its head — used by `?render` scripts for "the drive from A to B". */
+function RenderPathLine({ path, terrain, bounds, exaggeration }: {
+  path: RenderPath;
+  terrain: import('@/lib/geotiff-loader').TerrainData;
+  bounds: import('@/lib/geotiff-loader').GeoBounds;
+  exaggeration: number;
+}) {
+  const { pts, cum } = useMemo(() => {
+    const pts = path.coords.map(([lon, lat]) => {
+      const [x, y, z] = lonLatToScene(lon, lat, terrain, bounds, exaggeration);
+      return new THREE.Vector3(x, y + 0.012, z);
+    });
+    const cum = [0];
+    for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+    return { pts, cum };
+  }, [path.coords, terrain, bounds, exaggeration]);
+  const total = cum[cum.length - 1] || 1;
+  const goal = Math.max(0, Math.min(1, path.progress)) * total;
+  const shown: THREE.Vector3[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    if (cum[i] <= goal) { shown.push(pts[i]); continue; }
+    const f = (goal - cum[i - 1]) / (cum[i] - cum[i - 1]);
+    shown.push(pts[i - 1].clone().lerp(pts[i], f));
+    break;
+  }
+  if (shown.length < 2) return null;
+  const color = path.color ?? '#ffffff';
+  return (
+    <>
+      <Line points={shown} color={color} lineWidth={path.width ?? 5} transparent opacity={0.95} renderOrder={998} />
+      <SelectionRing position={shown[shown.length - 1]} color={color} size={0.045} />
+    </>
+  );
+}
+
+/** `?render` mode: hands camera + clock to an external script (window.__kor3d)
+ * so a headless browser can step the scene frame-by-frame at a fixed time
+ * step — no dropped frames, unlike realtime MediaRecorder capture. */
+function RenderDriver({ orbitRef, apiRef }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  orbitRef: React.MutableRefObject<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  apiRef: React.MutableRefObject<Record<string, (...args: any[]) => unknown>>;
+}) {
+  const { camera, advance, setFrameloop } = useThree();
+  useEffect(() => {
+    const w = window as unknown as { __kor3d?: Record<string, unknown> };
+    w.__kor3d = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      call: (name: string, ...args: any[]) => apiRef.current[name](...args),
+      setCamera: (pos: [number, number, number], target: [number, number, number], fov?: number) => {
+        camera.position.set(...pos);
+        const cam = camera as THREE.PerspectiveCamera;
+        if (fov && cam.fov !== fov) { cam.fov = fov; cam.updateProjectionMatrix(); }
+        if (orbitRef.current) {
+          orbitRef.current.target.set(...target);
+          orbitRef.current.update();
+        } else {
+          camera.lookAt(...target);
+        }
+      },
+      freeze: () => setFrameloop('never'),
+      unfreeze: () => setFrameloop('always'),
+      // Renders one frame with a deterministic clock (seconds).
+      renderAt: (t: number) => advance(t),
+    };
+    return () => { delete w.__kor3d; };
+  }, [camera, advance, setFrameloop, orbitRef, apiRef]);
+  return null;
+}
+
 /** Line2 (fat-lines) hit-testing needs an explicit raycaster threshold or it
  * defaults to 0 — an exact hit on the mathematically thin centerline, which
  * is practically unclickable regardless of the rendered line width. Affects
@@ -251,8 +341,10 @@ function LayerRow({ checked, onChecked, value, onValue, max = 3, children }: {
 export default function LocationPage() {
   const params = useParams<{ slug?: string }>();
   const routerLoc = useLocation();
+  const navigate = useNavigate();
   const slug = params.slug ?? routerLoc.pathname.replace(/^\//, '').split('/')[0];
   const location = slug ? findLocation(slug) : undefined;
+  const renderMode = new URLSearchParams(routerLoc.search).has('render');
   const { token } = useTerrainMode();
   const { terrain, loading, error } = useMapterhornTerrain(location?.bounds ?? null, !!location);
 
@@ -267,11 +359,33 @@ export default function LocationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location?.slug]);
   const [hideMenu, setHideMenu] = useState(false);
+  const [exploded, setExploded] = useState(false);
+  const [stackGap, setStackGap] = useState(1.4);
+  const [stackFlatten, setStackFlatten] = useState(0.2);
   const [showInspector, setShowInspector] = useState(false);
   const [showTerrain, setShowTerrain] = useState(true);
   const [showWater, setShowWater] = useState(true);
   const [showLakes, setShowLakes] = useState(true);
   const [showPopulation, setShowPopulation] = useState(true);
+  const [showEmbeddings, setShowEmbeddings] = useState(false);
+  // Sentinel change and Embeddings share the terrain overlay slot; opening one closes the other.
+  const [showSentinel, setShowSentinel] = useState(false);
+  const sentinelBaseUrl = location?.hasSentinelChange ? `${import.meta.env.BASE_URL}data/locations/${location.slug}/sentinel` : null;
+  const sentinel = useSentinelChange(sentinelBaseUrl, showSentinel && !!sentinelBaseUrl);
+  const populationVisible = showPopulation && !showEmbeddings && !showSentinel;
+  const waterVisible = showWater && !showEmbeddings;
+  const lakesVisible = showLakes && !showEmbeddings;
+  const embeddingBaseUrl = location?.embeddingYears?.length ? `${import.meta.env.BASE_URL}data/locations/${location.slug}/embeddings` : null;
+  const embeddings = useSatelliteEmbeddings(embeddingBaseUrl, showEmbeddings && !!embeddingBaseUrl, location?.embeddingYears ?? []);
+  const embeddingSearch = useEmbeddingSearch(embeddings.reference, location?.slug ?? '', embeddings.year, embeddings.metadata?.bounds ?? null,
+    embeddings.threshold, showEmbeddings && embeddings.mode === 'similarity');
+  const embeddingTimeline = useEmbeddingTimeline(embeddingBaseUrl, location?.embeddingYears ?? [], embeddings.metadata, embeddings.point, showEmbeddings && embeddings.mode === 'timeline');
+  const embeddingArrival = useMemo(() => location ? readEmbeddingArrival(routerLoc.state?.embeddingArrival, location.slug, location.embeddingYears ?? [], location.bounds) : null, [routerLoc.state, location]);
+  const openedEmbeddingArrival = useRef('');
+  const appliedEmbeddingArrival = useRef('');
+  const brushActive = showEmbeddings && !!embeddingBaseUrl && (embeddings.mode === 'similarity' || embeddings.mode === 'shoreline') && embeddings.tool === 'brush' && !!embeddings.metadata;
+  const embeddingBrush = useEmbeddingBrush(embeddings.metadata, embeddings.pixels, embeddings.brushRadius, embeddings.setPixels, brushActive);
+  useEffect(() => { setShowEmbeddings(false); }, [location?.slug]);
   const [showPlaces, setShowPlaces] = useState(true);
   const [showOsmBuildings, setShowOsmBuildings] = useState(false);
   const [showRoads, setShowRoads] = useState(false);
@@ -281,6 +395,10 @@ export default function LocationPage() {
   const [showBasinBorder, setShowBasinBorder] = useState(!!location?.highlightBasin);
   const [basinSceneRadius, setBasinSceneRadius] = useState<number | null>(null);
   const [showGlacier, setShowGlacier] = useState(!!location?.hasGlacierData);
+  const [showPeaks, setShowPeaks] = useState(!!location?.hasPeaks);
+  const [showMasterPlan, setShowMasterPlan] = useState(!!location?.hasMasterPlan);
+  const [showSki, setShowSki] = useState(!!location?.hasSkiData);
+  const [showPlanImage, setShowPlanImage] = useState(false);
   const [selectedGlacier, setSelectedGlacier] = useState<GlacierFeatureProps | null>(null);
   const [showCanals, setShowCanals] = useState(!!location?.hasCanalData);
   const [selectedCanal, setSelectedCanal] = useState<CanalFeature | null>(null);
@@ -288,6 +406,21 @@ export default function LocationPage() {
   const [selectedResource, setSelectedResource] = useState<ResourceFeature | null>(null);
   const [resourceObs, setResourceObs] = useState<ResourceFeature[]>([]);
   const [showMassBalance, setShowMassBalance] = useState(false);
+  const [showWaterBalance, setShowWaterBalance] = useState(false);
+  // Level picked in the water-balance panel, drawn as an approximate shoreline on the terrain.
+  const [lakeLevel, setLakeLevel] = useState<number | null>(null);
+  const [shoreline, setShoreline] = useState<ShorelineGrid | null>(null);
+  useEffect(() => {
+    if (!showWaterBalance || !location?.hasWaterBalance || shoreline) return;
+    let cancelled = false;
+    loadShoreline(`${import.meta.env.BASE_URL}data/locations/${location.slug}`)
+      .then((g) => { if (!cancelled) setShoreline(g); })
+      .catch((e) => console.warn('Shoreline unavailable', e));
+    return () => { cancelled = true; };
+  }, [showWaterBalance, location?.hasWaterBalance, location?.slug, shoreline]);
+  const lakeOverlay = useMemo(
+    () => (showWaterBalance && shoreline && lakeLevel != null ? shorelineRaster(shoreline, lakeLevel) : null),
+    [showWaterBalance, shoreline, lakeLevel]);
   const [showIceThickness, setShowIceThickness] = useState(!!location?.hasIceThickness);
   const [thicknessInfo, setThicknessInfo] = useState<ThicknessInfo | null>(null);
   const [showRetreat, setShowRetreat] = useState(false);
@@ -352,7 +485,7 @@ export default function LocationPage() {
     try { localStorage.setItem(intensityKey, JSON.stringify({ ...intensity, population: popIntensity })); } catch { /* ignore */ }
   }, [intensity, popIntensity, intensityKey]);
   const copyIntensityJson = () => {
-    const keys = ['water','lakes','basinRivers','basinBorder','buildings','glacier','canals','inat','population','places','roads','borders','resources'];
+    const keys = ['water','lakes','basinRivers','basinBorder','buildings','glacier','canals','inat','population','places','peaks','plan','ski','roads','borders','resources'];
     const all: Record<string, number> = { ...intensity, population: popIntensity };
     const out: Record<string, number> = {};
     for (const k of keys) out[k] = +(all[k] ?? 1).toFixed(2);
@@ -423,6 +556,11 @@ export default function LocationPage() {
     setPopPoint(null);
   };
   const flowLoopRef = useRef<number | null>(null);
+  const [renderMarkers, setRenderMarkers] = useState<RenderMarker[]>([]);
+  const [renderPath, setRenderPath] = useState<RenderPath | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderApiRef = useRef<Record<string, (...args: any[]) => unknown>>({});
+  useEffect(() => { if (renderMode) slideshowOffRef.current = true; }, [renderMode]);
   const orbitRef = useRef<any>(null);
 
   // Flyover: keyframe path playback + video export
@@ -517,7 +655,7 @@ export default function LocationPage() {
   // reading (`inatManualRef`/`resourceManualRef`) — checked live inside
   // pickRandom, not via the effect deps, since the ambient picks it makes
   // itself shouldn't trigger a teardown/restart of its own loop.
-  const otherPopupOpen = !!(selectedWater || selectedLake || selectedBasinRiver || selectedGlacier || popPoint || selectedCanal || selectedReservoir);
+  const otherPopupOpen = !!(showEmbeddings || showSentinel || showWaterBalance || selectedWater || selectedLake || selectedBasinRiver || selectedGlacier || popPoint || selectedCanal || selectedReservoir);
   useEffect(() => {
     if ((inatObs.length === 0 && resourceObs.length === 0) || otherPopupOpen) return;
     let cancelled = false;
@@ -638,6 +776,44 @@ export default function LocationPage() {
     setIsFlyingToGrid(true);
   };
 
+  const openEmbeddingMatch = (match: EmbeddingMatch) => {
+    if (!embeddings.reference || !location) return;
+    navigate(`/${match.slug}`, { state: { embeddingArrival: {
+      ...match, reference: Array.from(embeddings.reference), sourceLabel: embeddings.externalReference?.sourceLabel ?? location.label,
+    } } });
+  };
+
+  useEffect(() => {
+    if (!embeddingArrival || !location) {
+      openedEmbeddingArrival.current = '';
+      appliedEmbeddingArrival.current = '';
+      return;
+    }
+    if (openedEmbeddingArrival.current !== routerLoc.key) {
+      openedEmbeddingArrival.current = routerLoc.key;
+      setShowEmbeddings(true);
+      embeddings.setYear(embeddingArrival.year);
+      embeddings.setMode('similarity');
+      embeddings.setTool('move');
+    }
+    if (appliedEmbeddingArrival.current === routerLoc.key || loading || !terrain?.bounds || !embeddings.metadata || embeddings.metadata.year !== embeddingArrival.year) return;
+    const keys = ['minLon', 'maxLon', 'minLat', 'maxLat'] as const;
+    if (!keys.every(key => Math.abs(terrain.bounds[key] - location.bounds[key]) < 1e-10 && Math.abs(embeddings.metadata.bounds[key] - location.bounds[key]) < 1e-10)) return;
+    appliedEmbeddingArrival.current = routerLoc.key;
+    embeddings.setExternalReference({ vector: embeddingArrival.reference, sourceLabel: embeddingArrival.sourceLabel,
+      anchor: { lon: embeddingArrival.lon, lat: embeddingArrival.lat }, score: embeddingArrival.score });
+    closeAllPopups();
+    const target = lonLatToScene(embeddingArrival.lon, embeddingArrival.lat, terrain, location.bounds, exaggeration);
+    const camera = cameraRef.current;
+    const widthMeters = (location.bounds.maxLon - location.bounds.minLon) * 111320 * Math.cos(embeddingArrival.lat * Math.PI / 180);
+    const zoom = embeddingArrival.patchMeters ? Math.max(0.25, Math.min(1, embeddingArrival.patchMeters * 80 / widthMeters)) : 1;
+    setGridFlyKeyframes([
+      { id: 'embedding-start', pos: camera?.pos ?? [target[0] + 2, target[1] + 2, target[2] + 2], target: camera?.target ?? target },
+      { id: 'embedding-match', pos: [target[0] + 1.6 * zoom, target[1] + 2 * zoom, target[2] + 1.6 * zoom], target },
+    ]);
+    setIsFlyingToGrid(true);
+  }, [embeddingArrival, location, routerLoc.key, loading, terrain, embeddings, exaggeration, closeAllPopups]);
+
   const playPreview = () => {
     if (keyframes.length < 2 || isFlying) return;
     setIsFlying(true);
@@ -718,22 +894,63 @@ export default function LocationPage() {
 
   const dataBase = `${import.meta.env.BASE_URL}data/locations/${location.slug}`;
 
+  // Bottom-to-top floors for the exploded view — only layers that are
+  // actually showing get a floor, so the stack has no empty gaps.
+  const stackOrder = ([
+    ['terrain', showTerrain],
+    ['population', populationVisible],
+    ['glacier', (showGlacier || showRetreat) && !!location.hasGlacierData],
+    ['lakes', lakesVisible],
+    ['water', waterVisible],
+    ['basin', showBasinRivers || showBasinBorder],
+    ['canals', showCanals && !!location.hasCanalData],
+    ['buildings', showOsmBuildings],
+    ['roads', showRoads],
+    ['resources', showResources],
+    ['borders', showBorders],
+    ['inat', showInat],
+    ['places', showPlaces],
+    ['ski', showSki && !!location.hasSkiData],
+    ['plan', showMasterPlan && !!location.hasMasterPlan],
+    ['peaks', showPeaks && !!location.hasPeaks],
+  ] as const).filter(([, on]) => on).map(([id]) => id as string);
+
   // Single gate for the full-screen loader: terrain DEM, basemap imagery, and
   // the default-on data layers (water, population, places). Buildings/roads/
   // borders are off by default and don't block first paint.
   const assetsLoading =
     loading || texLoading ||
-    (showWater && !waterLoaded) ||
-    (showPopulation && !popLoaded) ||
+    (waterVisible && !waterLoaded) ||
+    (populationVisible && !popLoaded) ||
     (showPlaces && !placesLoaded);
 
+  if (renderMode) {
+    const layerSetters: Record<string, (v: boolean) => void> = {
+      terrain: setShowTerrain, water: setShowWater, lakes: setShowLakes, population: setShowPopulation,
+      places: setShowPlaces, buildings: setShowOsmBuildings, roads: setShowRoads, borders: setShowBorders,
+      resources: setShowResources, basinRivers: setShowBasinRivers, basinBorder: setShowBasinBorder,
+      glacier: setShowGlacier, canals: setShowCanals, inat: setShowInat,
+    };
+    renderApiRef.current = {
+      ready: () => !!terrain && !assetsLoading,
+      setLayers: (m: Record<string, boolean>) => Object.entries(m).forEach(([k, v]) => layerSetters[k]?.(v)),
+      setIntensity: (m: Record<string, number>) => setIntensities((cur) => ({ ...cur, ...m })),
+      setMarkers: (ms: RenderMarker[]) => setRenderMarkers(ms),
+      setPath: (p: RenderPath | null) => setRenderPath(p),
+      setPathProgress: (progress: number) => setRenderPath((p) => (p ? { ...p, progress } : p)),
+      toScene: (lon: number, lat: number) => terrain ? lonLatToScene(lon, lat, terrain, location.bounds, exaggeration) : null,
+    };
+  }
+
   return (
-    <div className="fixed inset-0 bg-background text-foreground" style={{ fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+    <div className="fixed inset-0 bg-background text-foreground" data-render={renderMode ? '' : undefined} style={{ fontFamily: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace' }}>
       <style>{`
         .location-serif, .display-font { font-family: "Sora", ui-sans-serif, system-ui, sans-serif; font-weight: 800; letter-spacing: -0.02em; }
         .tech-font { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+        [data-render] > :not(#scene):not(style) { display: none !important; }
       `}</style>
       <div
+        id="scene"
         className={exportSize ? 'absolute top-1/2 left-1/2 ring-2 ring-primary' : 'absolute inset-0'}
         style={exportSize ? {
           width: exportSize.w,
@@ -758,7 +975,8 @@ export default function LocationPage() {
 
         <OrbitControls
           ref={orbitRef}
-          enableDamping
+          enabled={!brushActive}
+          enableDamping={!renderMode}
           dampingFactor={0.06}
           minDistance={0.15}
           maxDistance={showBasinRivers ? basinMaxDistance : 110}
@@ -768,20 +986,48 @@ export default function LocationPage() {
         <CameraProbe orbitRef={orbitRef} onChange={handleCameraChange} />
         <CameraFarSync far={showBasinRivers ? basinFar : 300} />
         <RaycasterTuning />
+        {renderMode && <RenderDriver orbitRef={orbitRef} apiRef={renderApiRef} />}
         <FlyoverController keyframes={keyframes} playing={isFlying} duration={flyDuration} orbitRef={orbitRef} onDone={handleFlightDone} />
         <FlyoverController keyframes={gridFlyKeyframes} playing={isFlyingToGrid} duration={1.8} orbitRef={orbitRef} onDone={() => setIsFlyingToGrid(false)} />
 
         {terrain && (
-          <>
+          <ExplodedStack
+            active={exploded}
+            order={stackOrder}
+            gap={stackGap}
+            flatten={stackFlatten}
+            meshW={10}
+            meshH={10 * (terrain.height / terrain.width)}
+            orbitRef={orbitRef}
+          >
+            <StackSlice id="terrain">
             <group
-              onPointerMove={(e) => {
+              onPointerDown={brushActive ? (e) => {
+                if (!e.uv || e.button !== 0) return;
+                e.stopPropagation();
+                (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                closeAllPopups();
+                embeddingBrush.start(uvToCoord(e.uv, terrain, location.bounds));
+              } : undefined}
+              onPointerMove={showInspector || brushActive ? (e) => {
                 if (!e.uv) return;
-                setHover(uvToCoord(e.uv, terrain, location.bounds));
-              }}
-              onPointerOut={() => setHover(null)}
+                if (brushActive) {
+                  if (embeddingBrush.isPainting()) {
+                    e.stopPropagation();
+                    embeddingBrush.paint(uvToCoord(e.uv, terrain, location.bounds));
+                  }
+                } else setHover(uvToCoord(e.uv, terrain, location.bounds));
+              } : undefined}
+              onPointerUp={brushActive ? (e) => {
+                embeddingBrush.finish();
+                (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+              } : undefined}
+              onPointerOut={showInspector ? () => setHover(null) : undefined}
               onClick={(e) => {
                 if (!e.uv) return;
                 e.stopPropagation();
+                if (brushActive) return;
+                if (showEmbeddings && embeddings.mode === 'change') { closeAllPopups(); return; }
                 if (waterFlowActive && flowState) {
                   const col = Math.floor((e.uv.x) * (terrain.width - 1));
                   const row = Math.floor((1 - e.uv.y) * (terrain.height - 1));
@@ -789,7 +1035,21 @@ export default function LocationPage() {
                   setFlowKey((k) => k + 1);
                   return;
                 }
-                if (showPopulation && popGrid) {
+                if (showSentinel && sentinel.manifest) {
+                  if (e.delta > 5) return;
+                  const c = uvToCoord(e.uv, terrain, location.bounds);
+                  closeAllPopups();
+                  sentinel.setPoint({ lon: c.lon, lat: c.lat });
+                  return;
+                }
+                if (showEmbeddings && embeddingBaseUrl && embeddings.metadata && ['similarity', 'shoreline', 'timeline'].includes(embeddings.mode)) {
+                  if (embeddings.tool !== 'point' || e.delta > 5) return;
+                  const c = uvToCoord(e.uv, terrain, location.bounds);
+                  closeAllPopups();
+                  embeddings.setPoint({ lon: c.lon, lat: c.lat });
+                  return;
+                }
+                if (populationVisible && popGrid) {
                   const c = uvToCoord(e.uv, terrain, location.bounds);
                   const value = sampleGrid(popGrid, c.lon, c.lat);
                   // Only pop up where there's actually someone — clicking
@@ -820,9 +1080,21 @@ export default function LocationPage() {
                   tint={tint}
                   tintStrength={tintStrength}
                   onLoadingChange={setTexLoading}
+                  embeddingRaster={showSentinel ? sentinel.raster : showEmbeddings && embeddingBaseUrl ? embeddings.raster : lakeOverlay?.raster ?? null}
+                  embeddingOpacity={showSentinel ? sentinel.opacity : showEmbeddings ? embeddings.opacity : lakeOverlay ? 0.85 : embeddings.opacity}
+                  embeddingSecondRaster={showSentinel ? sentinel.secondRaster : showEmbeddings && embeddings.mode === 'change' ? embeddings.secondRaster : null}
+                  embeddingSplit={showSentinel ? sentinel.split : showEmbeddings && embeddings.mode === 'change' && embeddings.changeView === 'swipe' ? embeddings.swipe : null}
+                  embeddingBounds={showSentinel ? sentinel.manifest?.bounds : showEmbeddings ? embeddings.metadata?.bounds : lakeOverlay?.raster.bounds ?? embeddings.metadata?.bounds}
+                  selectionTexture={embeddingBaseUrl && ((showEmbeddings && ['similarity', 'shoreline'].includes(embeddings.mode) && embeddings.pixels !== null) || brushActive) ? embeddingBrush.texture : null}
                 />
               )}
             </group>
+            {showEmbeddings && embeddingBaseUrl && ['similarity', 'shoreline', 'timeline'].includes(embeddings.mode) && embeddings.point && (
+              <SelectionRing position={lonLatToScene(embeddings.point.lon, embeddings.point.lat, terrain, location.bounds, exaggeration)} color="#ffe62d" />
+            )}
+            {showEmbeddings && embeddings.mode === 'similarity' && embeddings.externalReference && (
+              <SelectionRing position={lonLatToScene(embeddings.externalReference.anchor.lon, embeddings.externalReference.anchor.lat, terrain, location.bounds, exaggeration)} color="#b482ff" />
+            )}
             <TerrainStyleOverlay
               terrain={terrain}
               exaggeration={exaggeration}
@@ -832,8 +1104,38 @@ export default function LocationPage() {
               meshInterval={meshInterval}
               bounds={location.bounds}
             />
+            {renderMarkers.map((m, i) => (
+              <SelectionRing
+                key={i}
+                position={lonLatToScene(m.lon, m.lat, terrain, location.bounds, exaggeration)}
+                color={m.color}
+                size={m.size}
+              />
+            ))}
+            {renderPath && (
+              <RenderPathLine path={renderPath} terrain={terrain} bounds={location.bounds} exaggeration={exaggeration} />
+            )}
+
+            {flowState && (
+              <WaterFlowOverlay
+                terrain={terrain}
+                exaggeration={exaggeration}
+                flowState={flowState}
+                renderKey={flowKey}
+              />
+            )}
+            {userLoc && (
+              <UserPin
+                terrain={terrain}
+                bounds={location.bounds}
+                exaggeration={exaggeration}
+                location={userLoc}
+              />
+            )}
+            </StackSlice>
+            <StackSlice id="water">
             <LayerFade intensity={iv('water')}>
-{showWater && (
+{waterVisible && (
               <OsmWaterwaysLayer
                 terrain={terrain}
                 exaggeration={exaggeration}
@@ -845,19 +1147,23 @@ export default function LocationPage() {
               />
             )}
 </LayerFade>
+            </StackSlice>
+            <StackSlice id="lakes">
             <LayerFade intensity={iv('lakes')}>
-{showLakes && (
+{lakesVisible && (
               <LakesLayer
                 terrain={terrain}
                 exaggeration={exaggeration}
                 bounds={location.bounds}
                 clipBounds={location.waterBounds ?? location.bounds}
-                enabled={showLakes}
+                enabled={lakesVisible}
                 dataUrl={`${dataBase}/${location.waterBounds ? 'water_large.json' : 'water.json'}`}
                 onSelect={(f) => { closeAllPopups(); setSelectedLake(f); }}
               />
             )}
 </LayerFade>
+            </StackSlice>
+            <StackSlice id="basin">
             {(showBasinRivers || showBasinBorder) && (
               <HydroBasinLayer
                 terrain={terrain}
@@ -874,14 +1180,18 @@ export default function LocationPage() {
                 riversIntensity={iv('basinRivers')}
                 boundaryIntensity={iv('basinBorder')}
                 onExtent={setBasinSceneRadius}
-                onSelect={(f) => { closeAllPopups(); setSelectedBasinRiver(f); }}
+                onSelect={showEmbeddings ? undefined : (f) => { closeAllPopups(); setSelectedBasinRiver(f); }}
               />
             )}
+            </StackSlice>
+            <StackSlice id="buildings">
             <LayerFade intensity={iv('buildings')}>
 {showOsmBuildings && (
               <OsmBuildingsLayer terrain={terrain} exaggeration={exaggeration} bounds={location.bounds} dataUrl={`${dataBase}/buildings.json`} />
             )}
 </LayerFade>
+            </StackSlice>
+            <StackSlice id="glacier">
             <LayerFade intensity={iv('glacier')}>
 {showGlacier && location.hasGlacierData && (
               <GlacierOutlineLayer
@@ -904,6 +1214,8 @@ export default function LocationPage() {
                 retreatMeters={retreatMeters}
               />
             )}
+            </StackSlice>
+            <StackSlice id="canals">
             <LayerFade intensity={iv('canals')}>
 {showCanals && location.hasCanalData && (
               <IrrigationCanalsLayer
@@ -916,6 +1228,8 @@ export default function LocationPage() {
               />
             )}
 </LayerFade>
+            </StackSlice>
+            <StackSlice id="inat">
             <LayerFade intensity={iv('inat')}>
 {showInat && (
               <InaturalistLayer
@@ -929,7 +1243,9 @@ export default function LocationPage() {
               />
             )}
 </LayerFade>
-            {showPopulation && (
+            </StackSlice>
+            <StackSlice id="population">
+            {populationVisible && (
               <OsmPopulationLayer
                 terrain={terrain}
                 exaggeration={exaggeration}
@@ -940,7 +1256,8 @@ export default function LocationPage() {
                 onSettled={() => setPopLoaded(true)}
               />
             )}
-            
+            </StackSlice>
+            <StackSlice id="places">
 {showPlaces && (
               <OsmPlacesLayer
                 terrain={terrain}
@@ -952,7 +1269,30 @@ export default function LocationPage() {
                 intensity={iv('places')}
               />
             )}
+            </StackSlice>
+            <StackSlice id="ski">
+            <LayerFade intensity={iv('ski')}>
+            {showSki && location.hasSkiData && (
+              <SkiLayer terrain={terrain} exaggeration={exaggeration} bounds={location.bounds} dataUrl={`${dataBase}/ski.json`} />
+            )}
+            </LayerFade>
+            </StackSlice>
+            <StackSlice id="plan">
+            <LayerFade intensity={iv('plan')}>
+            {showMasterPlan && location.hasMasterPlan && (
+              <MasterPlanLayer terrain={terrain} exaggeration={exaggeration} bounds={location.bounds} dataUrl={`${dataBase}/master_plan/master_plan.json`} />
+            )}
+            </LayerFade>
+            </StackSlice>
+            <StackSlice id="peaks">
+            <LayerFade intensity={iv('peaks')}>
+            {showPeaks && location.hasPeaks && (
+              <PeaksLayer terrain={terrain} exaggeration={exaggeration} bounds={location.bounds} dataUrl={`${dataBase}/peaks.json`} />
+            )}
+            </LayerFade>
+            </StackSlice>
 
+            <StackSlice id="roads">
             <LayerFade intensity={iv('roads')}>
 <OsmLinesLayer
               terrain={terrain}
@@ -972,6 +1312,8 @@ export default function LocationPage() {
                 out geom;`}
             />
 </LayerFade>
+            </StackSlice>
+            <StackSlice id="borders">
             <LayerFade intensity={iv('borders')}>
 {/* National borders only. */}
             <OsmLinesLayer
@@ -982,7 +1324,7 @@ export default function LocationPage() {
               enabled={showBorders}
               cacheKey="osm-borders-national"
               dataUrl={`${dataBase}/borders_national.json`}
-              color="#e05fd0"
+              color={renderMode ? '#ffffff' : '#e05fd0'}
               opacity={0.7}
               lineWidth={1.6}
               buildQuery={(bbox) => `[out:json][timeout:60];
@@ -992,6 +1334,8 @@ export default function LocationPage() {
                 out geom;`}
             />
             </LayerFade>
+            </StackSlice>
+            <StackSlice id="resources">
             <LayerFade intensity={iv('resources')}>
 {/* Resource extraction: mining/quarries, oil & gas, logging, industrial areas. */}
             <ResourcesLayer
@@ -1023,24 +1367,8 @@ export default function LocationPage() {
                 out geom;`}
             />
 </LayerFade>
-
-            {flowState && (
-              <WaterFlowOverlay
-                terrain={terrain}
-                exaggeration={exaggeration}
-                flowState={flowState}
-                renderKey={flowKey}
-              />
-            )}
-            {userLoc && (
-              <UserPin
-                terrain={terrain}
-                bounds={location.bounds}
-                exaggeration={exaggeration}
-                location={userLoc}
-              />
-            )}
-          </>
+            </StackSlice>
+          </ExplodedStack>
         )}
       </Canvas>
       </div>
@@ -1163,6 +1491,41 @@ export default function LocationPage() {
         )}
       </div>
 
+      {(embeddingBaseUrl || sentinelBaseUrl) && !hideMenu && <div className="absolute bottom-16 left-3 z-20 flex gap-2">
+        {embeddingBaseUrl && <button className={`${btnBase} ${showEmbeddings ? 'text-primary border-primary/50' : ''}`} aria-pressed={showEmbeddings} onClick={() => { if (!showEmbeddings) { closeAllPopups(); setShowSentinel(false); } setShowEmbeddings(!showEmbeddings); }}>
+          <Crosshair className="w-3.5 h-3.5" /> Embeddings
+        </button>}
+        {sentinelBaseUrl && <button className={`${btnBase} ${showSentinel ? 'text-primary border-primary/50' : ''}`} aria-pressed={showSentinel} onClick={() => { if (!showSentinel) { closeAllPopups(); setShowEmbeddings(false); } setShowSentinel(!showSentinel); }}>
+          <History className="w-3.5 h-3.5" /> Sentinel change
+        </button>}
+      </div>}
+      {showSentinel && sentinelBaseUrl && <SentinelChangePanel explorer={sentinel} onClose={() => setShowSentinel(false)} />}
+      {showPlanImage && location.hasMasterPlan && (
+        <figure aria-label="Resort master plan" className="absolute right-3 bottom-16 z-[120] w-[min(36rem,calc(100vw-1.5rem))] rounded-md border border-border bg-background/95 p-2 shadow-lg backdrop-blur text-xs space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-semibold">Master plan · Almaty Superski</span>
+            <button className="rounded border border-border px-2 py-0.5 hover:bg-accent" aria-label="Close master plan image" onClick={() => setShowPlanImage(false)}>×</button>
+          </div>
+          <img src={`${dataBase}/master_plan/plan.webp`} alt="Almaty Superski master plan, oblique view from the north" className="w-full rounded" />
+          <figcaption className="text-[10px] leading-relaxed text-muted-foreground">
+            Source: Kazakh Tourism Development. Oblique view, south at the top. Lifts and stations on the terrain are an approximate trace: dashed / ≈ items may be off by 1 km or more.
+          </figcaption>
+        </figure>
+      )}
+      {showSentinel && sentinel.split !== null && (
+        <div className="absolute inset-y-0 pointer-events-none border-l-2 border-white/90" style={{ left: `${sentinel.split * 100}%` }}>
+          <div className="absolute top-16 right-2 whitespace-nowrap rounded bg-background/90 px-2 py-1 text-xs">{sentinel.yearA}</div>
+          <div className="absolute top-16 left-2 whitespace-nowrap rounded bg-background/90 px-2 py-1 text-xs">{sentinel.yearB}</div>
+        </div>
+      )}
+      {showEmbeddings && embeddingBaseUrl && <SatelliteEmbeddingPanel explorer={embeddings} timeline={embeddingTimeline} search={embeddingSearch} onOpenMatch={openEmbeddingMatch} onClose={() => setShowEmbeddings(false)} />}
+      {showEmbeddings && embeddings.mode === 'change' && embeddings.changeView === 'swipe' && embeddings.secondRaster && (
+        <div className="absolute inset-y-0 pointer-events-none border-l-2 border-white/90" style={{ left: `${embeddings.swipe * 100}%` }}>
+          <div className="absolute top-16 right-2 whitespace-nowrap rounded bg-background/90 px-2 py-1 text-xs">{embeddings.year}</div>
+          <div className="absolute top-16 left-2 whitespace-nowrap rounded bg-background/90 px-2 py-1 text-xs">{embeddings.comparisonYear}</div>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="absolute top-3 right-3 flex items-center gap-2">
         <button
@@ -1174,6 +1537,28 @@ export default function LocationPage() {
           {hideMenu ? null : 'Hide'}
         </button>
         {!hideMenu && (<>
+        {/* Exploded layer stack */}
+        <div className="flex items-center">
+          <button
+            onClick={() => setExploded((v) => !v)}
+            className={`${btnBase} ${exploded ? 'text-primary border-primary/50 rounded-r-none' : ''}`}
+            aria-pressed={exploded}
+            title="Lift every layer onto its own floor"
+          >
+            <Layers3 className="w-3.5 h-3.5" /> Stack
+          </button>
+          {exploded && (
+            <Popover>
+              <PopoverTrigger className={`${btnBase} rounded-l-none border-l-0 px-2`} title="Stack settings">
+                <Sliders className="w-3.5 h-3.5" />
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-60 space-y-3">
+                <Slider label="Spacing" value={stackGap} min={0.3} max={4} step={0.1} onChange={setStackGap} format={(v) => v.toFixed(1)} />
+                <Slider label="Relief" value={stackFlatten} min={0} max={1} step={0.05} onChange={setStackFlatten} format={(v) => `${Math.round(v * 100)}%`} />
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
         {/* Layers */}
         <DropdownMenu>
           <DropdownMenuTrigger className={btnBase}>
@@ -1182,10 +1567,10 @@ export default function LocationPage() {
           <DropdownMenuContent align="end" className="w-72">
             <DropdownMenuLabel>Overlays</DropdownMenuLabel>
             <LayerRow checked={showWater} onChecked={setShowWater} value={iv('water')} onValue={(v) => setIv('water', v)}>
-              Water
+              Water{showEmbeddings ? ' · paused for Embeddings' : ''}
             </LayerRow>
             <LayerRow checked={showLakes} onChecked={setShowLakes} value={iv('lakes')} onValue={(v) => setIv('lakes', v)}>
-              Lakes (natural &amp; artificial)
+              Lakes (natural &amp; artificial){showEmbeddings ? ' · paused for Embeddings' : ''}
             </LayerRow>
             <LayerRow checked={showBasinRivers} onChecked={setShowBasinRivers} value={iv('basinRivers')} onValue={(v) => setIv('basinRivers', v)}>
               Basin rivers (HydroSHEDS)
@@ -1218,11 +1603,31 @@ export default function LocationPage() {
               iNaturalist observations
             </LayerRow>
             <LayerRow checked={showPopulation} onChecked={setShowPopulation} value={popIntensity} onValue={setPopIntensity} max={4}>
-              Population density
+              Population density{showEmbeddings ? ' (paused for Embeddings)' : ''}
             </LayerRow>
             <LayerRow checked={showPlaces} onChecked={setShowPlaces} value={iv('places')} onValue={(v) => setIv('places', v)}>
               Towns & villages
             </LayerRow>
+            {location.hasPeaks && (
+              <LayerRow checked={showPeaks} onChecked={setShowPeaks} value={iv('peaks')} onValue={(v) => setIv('peaks', v)}>
+                Peaks &amp; passes (OSM)
+              </LayerRow>
+            )}
+            {location.hasSkiData && (
+              <LayerRow checked={showSki} onChecked={setShowSki} value={iv('ski')} onValue={(v) => setIv('ski', v)}>
+                Ski lifts &amp; pistes (OSM)
+              </LayerRow>
+            )}
+            {location.hasMasterPlan && (
+              <LayerRow checked={showMasterPlan} onChecked={setShowMasterPlan} value={iv('plan')} onValue={(v) => setIv('plan', v)}>
+                Resort master plan (approx.)
+              </LayerRow>
+            )}
+            {location.hasMasterPlan && (
+              <DropdownMenuCheckboxItem checked={showPlanImage} onCheckedChange={(v) => setShowPlanImage(!!v)}>
+                Show original plan image
+              </DropdownMenuCheckboxItem>
+            )}
             <DropdownMenuSeparator />
             <LayerRow checked={showRoads} onChecked={setShowRoads} value={iv('roads')} onValue={(v) => setIv('roads', v)}>
               Roads
@@ -1462,6 +1867,23 @@ export default function LocationPage() {
         >
           <LayoutGrid className="w-3.5 h-3.5" /> Grid
         </button>
+
+        {location.slug === 'tuyuksu-glacier' && (
+          <Link className={btnBase} to="/glacier-test?layer=model" title="Explore 3D ice geometry and imported glacier simulations">
+            <Mountain className="w-3.5 h-3.5" /> 3D glacier
+          </Link>
+        )}
+
+        {location.hasWaterBalance && (
+          <button
+            className={`${btnBase} ${showWaterBalance ? 'text-primary border-primary/50' : ''}`}
+            aria-pressed={showWaterBalance}
+            onClick={() => setShowWaterBalance((v) => !v)}
+            title="Lake level: water-balance model hindcast and climate scenarios"
+          >
+            <Waves className="w-3.5 h-3.5" /> Lake level
+          </button>
+        )}
 
         {location.hasGlacierData && (
           <button
@@ -1776,6 +2198,10 @@ export default function LocationPage() {
       )}
 
       {/* Mass balance chart (WGMS FoG) */}
+      {showWaterBalance && location.hasWaterBalance && (
+        <WaterBalancePanel dataUrl={`${dataBase}/water_balance.json`} onLevel={setLakeLevel}
+          areaFraction={lakeOverlay?.areaFraction ?? null} onClose={() => { setShowWaterBalance(false); setLakeLevel(null); }} />
+      )}
       {showMassBalance && location.hasGlacierData && (
         <GlacierChartPanel dataUrl={`${dataBase}/mass_balance.json`} onClose={() => setShowMassBalance(false)} />
       )}

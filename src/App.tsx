@@ -2,10 +2,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import NotFound from "./pages/NotFound";
 import LocationPage from "./pages/LocationPage";
 import BasinsPage from "./pages/BasinsPage";
 import { LOCATIONS } from "./lib/locations";
+
+const GlacierTestPage = lazy(() => import("./pages/GlacierTestPage"));
 
 const App = () => (
   <TooltipProvider>
@@ -16,6 +19,7 @@ const App = () => (
       <Routes>
         <Route path="/" element={<Navigate to={`/${LOCATIONS[0].slug}`} replace />} />
         <Route path="/basins" element={<BasinsPage />} />
+        <Route path="/glacier-test" element={<Suspense fallback={<div role="status" className="p-8">Loading glacier field test…</div>}><GlacierTestPage /></Suspense>} />
         {LOCATIONS.map((l) => (
           <Route key={l.slug} path={`/${l.slug}`} element={<LocationPage />} />
         ))}

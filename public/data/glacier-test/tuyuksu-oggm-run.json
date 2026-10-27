@@ -1,0 +1,187 @@
+{
+  "glacier": "RGI60-13.08624",
+  "glacierName": "Tsentralniy Tuyuksu Glacier",
+  "model": "OGGM",
+  "version": "1.6.3",
+  "experiment": {
+    "startYear": 2020,
+    "endYear": 2100,
+    "baselineStart": 1999,
+    "baselineEnd": 2019,
+    "temperatureBiasC": 1.5,
+    "precipitation": "unchanged",
+    "randomSeed": 1,
+    "initialization": "_spinup_historical",
+    "calibratedForecast": false
+  },
+  "preprocessedData": {
+    "baseUrl": "https://cluster.klima.uni-bremen.de/~oggm/gdirs/oggm_v1.6/L3-L5_files/2025.6/elev_bands/W5E5/per_glacier_spinup/",
+    "level": 4,
+    "rgiVersion": "62",
+    "border": 80,
+    "archiveSha256": "fce2a3177363723bc8cd655ef19fe87403abbf0627835aac7a8c2f7ea9349d2f"
+  },
+  "modelGrid": {
+    "dxM": 34.0,
+    "width": 222,
+    "height": 245,
+    "crs": "+proj=utm +zone=43 +datum=WGS84 +units=m +no_defs"
+  },
+  "display": {
+    "width": 105,
+    "height": 128,
+    "years": [
+      2020,
+      2025,
+      2030,
+      2035,
+      2040,
+      2045,
+      2050,
+      2055,
+      2060,
+      2065,
+      2070,
+      2075,
+      2080,
+      2085,
+      2090,
+      2095,
+      2100
+    ],
+    "thicknessRoundingM": 0.01,
+    "spatialResampling": false,
+    "redistribution": "OGGM sandbox.distribute_2d, no temporal smoothing, no monthly interpolation"
+  },
+  "volumeChecks": [
+    {
+      "year": 2020,
+      "flowlineVolumeM3": 121792539.28988056,
+      "distributedVolumeM3": 121792539.28988056,
+      "flowlineAreaM2": 2742498.4351545484
+    },
+    {
+      "year": 2025,
+      "flowlineVolumeM3": 92851176.02724716,
+      "distributedVolumeM3": 92851176.02724713,
+      "flowlineAreaM2": 2675473.261077524
+    },
+    {
+      "year": 2030,
+      "flowlineVolumeM3": 70062046.76834801,
+      "distributedVolumeM3": 70062046.76834801,
+      "flowlineAreaM2": 2553993.8220115663
+    },
+    {
+      "year": 2035,
+      "flowlineVolumeM3": 43684533.02416267,
+      "distributedVolumeM3": 43684533.02416267,
+      "flowlineAreaM2": 2170055.281081594
+    },
+    {
+      "year": 2040,
+      "flowlineVolumeM3": 25287032.805225573,
+      "distributedVolumeM3": 25287032.80522557,
+      "flowlineAreaM2": 1585586.9218379501
+    },
+    {
+      "year": 2045,
+      "flowlineVolumeM3": 18280096.675691597,
+      "distributedVolumeM3": 18280096.675691597,
+      "flowlineAreaM2": 1265570.3288678601
+    },
+    {
+      "year": 2050,
+      "flowlineVolumeM3": 10299217.701749029,
+      "distributedVolumeM3": 10299217.701749029,
+      "flowlineAreaM2": 648604.6467972444
+    },
+    {
+      "year": 2055,
+      "flowlineVolumeM3": 8815941.921611983,
+      "distributedVolumeM3": 8815941.921611983,
+      "flowlineAreaM2": 509610.0154865767
+    },
+    {
+      "year": 2060,
+      "flowlineVolumeM3": 8152605.363399402,
+      "distributedVolumeM3": 8152605.363399402,
+      "flowlineAreaM2": 790529.63953593
+    },
+    {
+      "year": 2065,
+      "flowlineVolumeM3": 7921816.711801767,
+      "distributedVolumeM3": 7921816.711801767,
+      "flowlineAreaM2": 508672.6116579271
+    },
+    {
+      "year": 2070,
+      "flowlineVolumeM3": 8792138.907075588,
+      "distributedVolumeM3": 8792138.907075588,
+      "flowlineAreaM2": 510249.29836597404
+    },
+    {
+      "year": 2075,
+      "flowlineVolumeM3": 6615759.588131048,
+      "distributedVolumeM3": 6615759.588131048,
+      "flowlineAreaM2": 371734.1055072484
+    },
+    {
+      "year": 2080,
+      "flowlineVolumeM3": 6655257.053378089,
+      "distributedVolumeM3": 6655257.053378091,
+      "flowlineAreaM2": 372006.80805044854
+    },
+    {
+      "year": 2085,
+      "flowlineVolumeM3": 6035254.834661373,
+      "distributedVolumeM3": 6035254.834661373,
+      "flowlineAreaM2": 787818.5150062635
+    },
+    {
+      "year": 2090,
+      "flowlineVolumeM3": 5935203.503007797,
+      "distributedVolumeM3": 5935203.503007795,
+      "flowlineAreaM2": 371009.4532981967
+    },
+    {
+      "year": 2095,
+      "flowlineVolumeM3": 5774780.489100349,
+      "distributedVolumeM3": 5774780.489100349,
+      "flowlineAreaM2": 370898.3681232213
+    },
+    {
+      "year": 2100,
+      "flowlineVolumeM3": 5755371.458911888,
+      "distributedVolumeM3": 5755371.458911888,
+      "flowlineAreaM2": 370999.72896865837
+    }
+  ],
+  "sha256": "8dddbb0570b77e1020bf2bdc66e343a144b8c40e2c5c633d81784bf6e74ef67f",
+  "python": "3.12.14",
+  "packages": {
+    "oggm": "1.6.3",
+    "numpy": "1.26.4",
+    "scipy": "1.14.1",
+    "pandas": "2.2.3",
+    "xarray": "2025.1.2",
+    "salem": "0.3.11",
+    "geopandas": "1.0.1",
+    "rasterio": "1.4.3",
+    "netCDF4": "1.7.2",
+    "shapely": "2.0.7",
+    "scikit-image": "0.24.0"
+  },
+  "references": [
+    "https://doi.org/10.5194/gmd-12-909-2019",
+    "https://tutorials.oggm.org/stable/notebooks/tutorials/distribute_flowline.html",
+    "https://docs.oggm.org/en/stable/input-data.html"
+  ],
+  "limitations": [
+    "Single illustrative experiment; not a calibrated Tuyuksu forecast, an SSP pathway, or an uncertainty ensemble.",
+    "OGGM solves glacier flow along elevation bands; the 2D footprint is a heuristic redistribution, not a 3D stress solution.",
+    "The 2D redistribution supports retreat within the inventory footprint; it cannot faithfully represent advance beyond it.",
+    "Years are experiment years. The initial 2020 geometry is a model state, not a 2020 survey.",
+    "Modeled geometry and volume differ from the separate Farinotti/Mapterhorn reference dataset."
+  ]
+}

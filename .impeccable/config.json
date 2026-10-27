@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "src/pages/LocationPage.tsx"
+        ],
+        "createdAt": "2026-10-27T08:02:21.540Z",
+        "reason": "Claude: match is the literal text '<img>' inside a code comment about the iNaturalist grid (pre-existing), not a tag"
+      }
+    ]
+  }
+}

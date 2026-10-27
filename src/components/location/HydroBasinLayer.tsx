@@ -278,14 +278,14 @@ const HydroBasinLayer = ({
     <group ref={fadeRef}>
     <primitive
       object={group}
-      onClick={(e: any) => {
+      onClick={onSelect ? (e: any) => {
         const river = e.object?.userData?.river as RiverFeature | undefined;
-        if (river) { e.stopPropagation(); onSelect?.(river); }
-      }}
-      onPointerOver={(e: any) => {
+        if (river) { e.stopPropagation(); onSelect(river); }
+      } : undefined}
+      onPointerOver={onSelect ? (e: any) => {
         if (e.object?.userData?.river) document.body.style.cursor = 'pointer';
-      }}
-      onPointerOut={() => { document.body.style.cursor = ''; }}
+      } : undefined}
+      onPointerOut={onSelect ? () => { document.body.style.cursor = ''; } : undefined}
     />
     </group>
   );

@@ -109,6 +109,33 @@ async function fetchPlaces(b) {
   return overpass(q);
 }
 
+// Existing ski areas (ski.json, SkiLayer): lifts with their pylons, stations
+// and pistes. Piste route relations are kept with member geometry because
+// some resorts tag the relation, not the member ways.
+async function fetchSki(b) {
+  const q = `[out:json][timeout:120];
+    (
+      way["aerialway"](${bbox(b)});
+      node["aerialway"~"^(station|pylon)$"](${bbox(b)});
+      way["piste:type"](${bbox(b)});
+      relation["piste:type"](${bbox(b)});
+    );
+    out geom;`;
+  return overpass(q);
+}
+
+// Named summits and passes for mountain locations (peaks.json, PeaksLayer).
+async function fetchPeaks(b) {
+  const q = `[out:json][timeout:80];
+    (
+      node["natural"~"^(peak|volcano)$"]["name"](${bbox(b)});
+      node["natural"="saddle"]["name"](${bbox(b)});
+      node["mountain_pass"="yes"]["name"](${bbox(b)});
+    );
+    out body 2000;`;
+  return overpass(q);
+}
+
 async function fetchBordersNational(b) {
   const q = `[out:json][timeout:80];
     (
@@ -198,6 +225,9 @@ async function main() {
   const bordersOnly = args.includes('--borders-only');
   const resourcesOnly = args.includes('--resources-only');
   const roadsOnly = args.includes('--roads-only');
+  const peaksOnly = args.includes('--peaks-only');
+  const skiOnly = args.includes('--ski-only');
+  const anyOnly = args.some((a) => a.endsWith('-only'));
   const skipWater = args.includes('--skip-water'); // keep existing water*.json (e.g. when Overpass can't serve the big bbox)
   const requested = args.filter((a) => !a.startsWith('--'));
   const targets = requested.length
@@ -213,6 +243,18 @@ async function main() {
       console.log('  roads (major)…');
       const roads = await fetchRoadsMajor(loc.waterBounds ?? loc.bounds);
       await writeJson(path.join(outDir, 'roads.json'), roads);
+      continue;
+    }
+
+    if (skiOnly || (loc.ski && !anyOnly)) {
+      console.log('  ski lifts & pistes…');
+      await writeJson(path.join(outDir, 'ski.json'), await fetchSki(loc.bounds));
+      if (skiOnly) continue;
+    }
+
+    if (peaksOnly) {
+      console.log('  peaks & passes…');
+      await writeJson(path.join(outDir, 'peaks.json'), await fetchPeaks(loc.bounds));
       continue;
     }
 
@@ -257,6 +299,9 @@ async function main() {
     console.log('  places…');
     const places = await fetchPlaces(loc.waterBounds ?? loc.bounds);
     await writeJson(path.join(outDir, 'places.json'), places);
+
+    console.log('  peaks & passes…');
+    await writeJson(path.join(outDir, 'peaks.json'), await fetchPeaks(loc.bounds));
 
     console.log('  borders (national)…');
     const bordersNational = await fetchBordersNational(loc.waterBounds ?? loc.bounds);

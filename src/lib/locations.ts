@@ -24,6 +24,18 @@ export interface LocationDef {
   /** Has water_accounting.json — real (not HydroSHEDS-modeled) irrigation
    * canal design capacities and NIC ICWC reservoir/withdrawal figures. */
   hasCanalData?: boolean;
+  /** Locally prepared AlphaEarth annual embedding grids. */
+  embeddingYears?: number[];
+  /** Has sentinel/manifest.json — annual Sentinel-2/-1 summer composites (scripts/prefetch/sentinel-change.py). */
+  hasSentinelChange?: boolean;
+  /** Has water_balance.json — lake level hindcast and scenarios (scripts/prefetch/balkhash-water-balance.py). */
+  hasWaterBalance?: boolean;
+  /** Has peaks.json — named OSM summits and passes (overpass.mjs --peaks-only). */
+  hasPeaks?: boolean;
+  /** Has master_plan/master_plan.json + plan.webp — an approximate trace of a planned resort. */
+  hasMasterPlan?: boolean;
+  /** Has ski.json — OSM lifts, stations and pistes of existing ski areas (overpass.mjs fetchSki). */
+  hasSkiData?: boolean;
   /** Optional per-location basemap image adjustment defaults (see LocationPage's Image panel). */
   imageDefaults?: {
     brightness?: number;
@@ -53,6 +65,7 @@ export function bboxAround(lat: number, lon: number, sizeKm: number): GeoBounds 
 export const LOCATIONS: LocationDef[] = [
   {
     slug: 'suaq',
+    embeddingYears: [2025],
     label: 'Suaq',
     center: { lat: (43.33403 + 43.36792) / 2, lon: (79.03803 + 79.09781) / 2 },
     bounds: {
@@ -69,6 +82,7 @@ export const LOCATIONS: LocationDef[] = [
   },
   {
     slug: 'almaty',
+    embeddingYears: [2025],
     label: 'Almaty',
     center: { lat: (43.220 + 43.256) / 2, lon: (76.925 + 76.975) / 2 },
     bounds: {
@@ -88,6 +102,7 @@ export const LOCATIONS: LocationDef[] = [
     // place=suburb boundary (way 1487361883) spans lat 43.2029–43.2266,
     // lon 76.9371–76.9690; bounds below pad that ~15% on every side.
     slug: 'gorny-gigant',
+    embeddingYears: [2025, 2017],
     label: 'Gorny Gigant',
     center: { lat: (43.1993 + 43.2302) / 2, lon: (76.9323 + 76.9737) / 2 },
     bounds: {
@@ -95,6 +110,32 @@ export const LOCATIONS: LocationDef[] = [
       maxLat: 43.2302,
       minLon: 76.9323,
       maxLon: 76.9737,
+    },
+    waterBounds: {
+      minLat: 42.96, maxLat: 43.52,
+      minLon: 76.62, maxLon: 77.28,
+    },
+    exaggeration: 30,
+  },
+  {
+    // Көкжайлау (Kok-Zhailau) — plateau between the Big Almaty and Medeu
+    // gorges, site of the proposed ski resort. West edge just past the
+    // master plan's westernmost station (1450 m, ~76.953°E, where the road
+    // from Almaty arrives); east edge past
+    // Shymbulak (OSM landuse=winter_sports to 77.123°E) and the Talgar pass
+    // (Талғар, 3200 m, 77.111°E). The south edge reaches Құмбелтау (3618 m,
+    // 43.085°N), where the master plan's top lifts end.
+    slug: 'kok-zhailau',
+    embeddingYears: [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017],
+    hasSentinelChange: true,
+    hasPeaks: true,
+    hasMasterPlan: true,
+    hasSkiData: true,
+    label: 'Kok-Zhailau',
+    center: { lat: (43.075 + 43.175) / 2, lon: (76.943 + 77.130) / 2 },
+    bounds: {
+      minLat: 43.075, maxLat: 43.175,
+      minLon: 76.943, maxLon: 77.130,
     },
     waterBounds: {
       minLat: 42.96, maxLat: 43.52,
@@ -131,6 +172,7 @@ export const LOCATIONS: LocationDef[] = [
   {
     // Lake Balqash — shoreline at Balkhash city on the north shore.
     slug: 'balqash',
+    embeddingYears: [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017],
     label: 'Balqash',
     center: { lat: 46.845, lon: 74.994 },
     bounds: {
@@ -148,6 +190,8 @@ export const LOCATIONS: LocationDef[] = [
   {
     // Entire Lake Balqash and surroundings (~600 km east-west).
     slug: 'balqash-lake',
+    embeddingYears: [2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017],
+    hasWaterBalance: true,
     label: 'Lake Balqash',
     center: { lat: 46.20, lon: 75.60 },
     bounds: {
@@ -306,6 +350,32 @@ export const LOCATIONS: LocationDef[] = [
       minLon: 44.80, maxLon: 56.20,
     },
     exaggeration: 30,
+  },
+  {
+    // Peninsular (West) Malaysia — the mainland part only, from the Thai
+    // border (Perlis/Kelantan) down to Johor and the Strait of Johor.
+    // Titiwangsa range spine, Kuala Lumpur, Cameron Highlands, Taman
+    // Negara; Strait of Malacca to the west. Bbox also takes in Singapore
+    // and the southern tip of Thailand.
+    slug: 'malaysia',
+    label: 'Malaysia',
+    center: { lat: 3.975, lon: 102.10 },
+    bounds: {
+      minLat: 1.15, maxLat: 6.80,
+      minLon: 99.55, maxLon: 104.65,
+    },
+    waterBounds: {
+      minLat: 0.95, maxLat: 7.00,
+      minLon: 99.30, maxLon: 104.90,
+    },
+    exaggeration: 6,
+    imageDefaults: {
+      brightness: 5.4,
+      contrast: 0.8,
+      saturation: 0.6,
+      gamma: 0.9,
+      tintStrength: 0,
+    },
   },
 ];
 

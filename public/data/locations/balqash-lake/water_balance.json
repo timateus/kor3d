@@ -1,0 +1,4230 @@
+{
+ "title": "Lake Balkhash water balance",
+ "model": "Monthly bucket model: dV = Q_in + (P \u2212 k_E\u00b7ET0)\u00b7A(h) \u2212 G",
+ "sources": {
+  "hypsometry": "Tursunov, Madibekov & Kulebaev, \"Present morphometrical parameters of Balkhash lake\", Uchenye Zapiski RSHU 34 (2014), Table 1 \u2014 bathymetric survey 2011\u20132013",
+  "levels": "Ivkina, \"Water level variations on the Balkash Lake in the modern period\", Hydrometeorology and Ecology 3 (2022), doi:10.54668/2789-6323-2022-106-3-6-13",
+  "balance": "Alimkulov et al., \"Long-Term Water Level Projections for Lake Balkhash Using Scenario-Based Water Balance Modeling\", Water 17 (2025) 2021, doi:10.3390/w17132021, Tables 3\u20135",
+  "climate": "ERA5 reanalysis via Open-Meteo historical weather API (precipitation_sum, et0_fao_evapotranspiration)"
+ },
+ "calibration": {
+  "k_E": 0.74,
+  "k_P": 1.227,
+  "rmse_m": 0.384,
+  "observed": {
+   "1961": 342.99,
+   "1987": 340.66,
+   "2005": 342.6,
+   "2010": 342.39,
+   "2011": 342.76,
+   "2012": 342.73,
+   "2013": 342.57,
+   "2014": 342.37,
+   "2015": 342.16,
+   "2016": 342.27,
+   "2017": 342.68,
+   "2018": 342.73,
+   "2019": 342.69,
+   "2020": 342.52,
+   "2021": 342.18
+  }
+ },
+ "hypsometry": [
+  {
+   "level": 335.2,
+   "area": 6265,
+   "volume": 20.33
+  },
+  {
+   "level": 337.2,
+   "area": 9863,
+   "volume": 36.46
+  },
+  {
+   "level": 339.3,
+   "area": 13085,
+   "volume": 60.55
+  },
+  {
+   "level": 341.3,
+   "area": 17391,
+   "volume": 91.03
+  },
+  {
+   "level": 342.5,
+   "area": 19225,
+   "volume": 113.0
+  }
+ ],
+ "inflow_periods": [
+  [
+   1947,
+   1969,
+   16.0
+  ],
+  [
+   1970,
+   1987,
+   12.2
+  ],
+  [
+   1988,
+   2100,
+   14.7
+  ]
+ ],
+ "groundwater_loss": 0.384,
+ "hindcast": [
+  {
+   "year": 1962,
+   "level": 343.026,
+   "area": 20029,
+   "volume": 123.33,
+   "inflow": 16.0,
+   "precip": 4.02,
+   "evap": 18.57
+  },
+  {
+   "year": 1963,
+   "level": 343.084,
+   "area": 20117,
+   "volume": 124.48,
+   "inflow": 16.0,
+   "precip": 4.55,
+   "evap": 17.99
+  },
+  {
+   "year": 1964,
+   "level": 343.232,
+   "area": 20344,
+   "volume": 127.49,
+   "inflow": 16.0,
+   "precip": 3.73,
+   "evap": 17.18
+  },
+  {
+   "year": 1965,
+   "level": 343.264,
+   "area": 20392,
+   "volume": 128.13,
+   "inflow": 16.0,
+   "precip": 3.58,
+   "evap": 19.12
+  },
+  {
+   "year": 1966,
+   "level": 343.304,
+   "area": 20454,
+   "volume": 128.96,
+   "inflow": 16.0,
+   "precip": 4.37,
+   "evap": 18.69
+  },
+  {
+   "year": 1967,
+   "level": 343.391,
+   "area": 20587,
+   "volume": 130.74,
+   "inflow": 16.0,
+   "precip": 3.7,
+   "evap": 17.36
+  },
+  {
+   "year": 1968,
+   "level": 343.455,
+   "area": 20684,
+   "volume": 132.05,
+   "inflow": 16.0,
+   "precip": 4.32,
+   "evap": 18.59
+  },
+  {
+   "year": 1969,
+   "level": 343.551,
+   "area": 20831,
+   "volume": 134.04,
+   "inflow": 16.0,
+   "precip": 4.27,
+   "evap": 17.53
+  },
+  {
+   "year": 1970,
+   "level": 343.502,
+   "area": 20756,
+   "volume": 133.03,
+   "inflow": 12.2,
+   "precip": 3.44,
+   "evap": 18.53
+  },
+  {
+   "year": 1971,
+   "level": 343.381,
+   "area": 20571,
+   "volume": 130.53,
+   "inflow": 12.2,
+   "precip": 4.13,
+   "evap": 18.85
+  },
+  {
+   "year": 1972,
+   "level": 343.322,
+   "area": 20482,
+   "volume": 129.33,
+   "inflow": 12.2,
+   "precip": 4.69,
+   "evap": 16.88
+  },
+  {
+   "year": 1973,
+   "level": 343.245,
+   "area": 20364,
+   "volume": 127.75,
+   "inflow": 12.2,
+   "precip": 4.08,
+   "evap": 17.85
+  },
+  {
+   "year": 1974,
+   "level": 343.072,
+   "area": 20099,
+   "volume": 124.24,
+   "inflow": 12.2,
+   "precip": 2.03,
+   "evap": 18.99
+  },
+  {
+   "year": 1975,
+   "level": 342.848,
+   "area": 19757,
+   "volume": 119.78,
+   "inflow": 12.2,
+   "precip": 3.03,
+   "evap": 18.53
+  },
+  {
+   "year": 1976,
+   "level": 342.702,
+   "area": 19533,
+   "volume": 116.91,
+   "inflow": 12.2,
+   "precip": 4.3,
+   "evap": 17.26
+  },
+  {
+   "year": 1977,
+   "level": 342.603,
+   "area": 19383,
+   "volume": 114.99,
+   "inflow": 12.2,
+   "precip": 3.15,
+   "evap": 17.98
+  },
+  {
+   "year": 1978,
+   "level": 342.487,
+   "area": 19205,
+   "volume": 112.75,
+   "inflow": 12.2,
+   "precip": 4.63,
+   "evap": 17.49
+  },
+  {
+   "year": 1979,
+   "level": 342.505,
+   "area": 19233,
+   "volume": 113.1,
+   "inflow": 12.2,
+   "precip": 4.34,
+   "evap": 15.92
+  },
+  {
+   "year": 1980,
+   "level": 342.422,
+   "area": 19106,
+   "volume": 111.51,
+   "inflow": 12.2,
+   "precip": 3.09,
+   "evap": 17.77
+  },
+  {
+   "year": 1981,
+   "level": 342.326,
+   "area": 18959,
+   "volume": 109.67,
+   "inflow": 12.2,
+   "precip": 4.12,
+   "evap": 16.54
+  },
+  {
+   "year": 1982,
+   "level": 342.223,
+   "area": 18801,
+   "volume": 107.73,
+   "inflow": 12.2,
+   "precip": 2.42,
+   "evap": 17.01
+  },
+  {
+   "year": 1983,
+   "level": 342.109,
+   "area": 18627,
+   "volume": 105.59,
+   "inflow": 12.2,
+   "precip": 3.51,
+   "evap": 16.84
+  },
+  {
+   "year": 1984,
+   "level": 342.014,
+   "area": 18483,
+   "volume": 103.84,
+   "inflow": 12.2,
+   "precip": 2.38,
+   "evap": 16.73
+  },
+  {
+   "year": 1985,
+   "level": 341.904,
+   "area": 18315,
+   "volume": 101.82,
+   "inflow": 12.2,
+   "precip": 3.66,
+   "evap": 16.63
+  },
+  {
+   "year": 1986,
+   "level": 341.834,
+   "area": 18207,
+   "volume": 100.53,
+   "inflow": 12.2,
+   "precip": 2.88,
+   "evap": 16.09
+  },
+  {
+   "year": 1987,
+   "level": 341.81,
+   "area": 18171,
+   "volume": 100.11,
+   "inflow": 12.2,
+   "precip": 3.89,
+   "evap": 15.69
+  },
+  {
+   "year": 1988,
+   "level": 341.929,
+   "area": 18353,
+   "volume": 102.28,
+   "inflow": 14.7,
+   "precip": 4.88,
+   "evap": 15.54
+  },
+  {
+   "year": 1989,
+   "level": 342.08,
+   "area": 18583,
+   "volume": 105.06,
+   "inflow": 14.7,
+   "precip": 3.64,
+   "evap": 16.12
+  },
+  {
+   "year": 1990,
+   "level": 342.128,
+   "area": 18656,
+   "volume": 105.95,
+   "inflow": 14.7,
+   "precip": 3.61,
+   "evap": 17.12
+  },
+  {
+   "year": 1991,
+   "level": 342.121,
+   "area": 18646,
+   "volume": 105.82,
+   "inflow": 14.7,
+   "precip": 2.26,
+   "evap": 17.74
+  },
+  {
+   "year": 1992,
+   "level": 342.098,
+   "area": 18611,
+   "volume": 105.4,
+   "inflow": 14.7,
+   "precip": 2.35,
+   "evap": 16.2
+  },
+  {
+   "year": 1993,
+   "level": 342.178,
+   "area": 18733,
+   "volume": 106.89,
+   "inflow": 14.7,
+   "precip": 3.81,
+   "evap": 15.85
+  },
+  {
+   "year": 1994,
+   "level": 342.246,
+   "area": 18837,
+   "volume": 108.17,
+   "inflow": 14.7,
+   "precip": 3.22,
+   "evap": 16.91
+  },
+  {
+   "year": 1995,
+   "level": 342.241,
+   "area": 18829,
+   "volume": 108.06,
+   "inflow": 14.7,
+   "precip": 2.63,
+   "evap": 17.88
+  },
+  {
+   "year": 1996,
+   "level": 342.236,
+   "area": 18822,
+   "volume": 107.99,
+   "inflow": 14.7,
+   "precip": 3.12,
+   "evap": 16.93
+  },
+  {
+   "year": 1997,
+   "level": 342.206,
+   "area": 18775,
+   "volume": 107.41,
+   "inflow": 14.7,
+   "precip": 2.5,
+   "evap": 18.65
+  },
+  {
+   "year": 1998,
+   "level": 342.223,
+   "area": 18801,
+   "volume": 107.73,
+   "inflow": 14.7,
+   "precip": 3.74,
+   "evap": 16.32
+  },
+  {
+   "year": 1999,
+   "level": 342.296,
+   "area": 18914,
+   "volume": 109.11,
+   "inflow": 14.7,
+   "precip": 4.1,
+   "evap": 16.65
+  },
+  {
+   "year": 2000,
+   "level": 342.322,
+   "area": 18953,
+   "volume": 109.6,
+   "inflow": 14.7,
+   "precip": 3.11,
+   "evap": 17.24
+  },
+  {
+   "year": 2001,
+   "level": 342.352,
+   "area": 19000,
+   "volume": 110.18,
+   "inflow": 14.7,
+   "precip": 3.02,
+   "evap": 16.86
+  },
+  {
+   "year": 2002,
+   "level": 342.398,
+   "area": 19069,
+   "volume": 111.04,
+   "inflow": 14.7,
+   "precip": 4.29,
+   "evap": 17.53
+  },
+  {
+   "year": 2003,
+   "level": 342.5,
+   "area": 19225,
+   "volume": 113.0,
+   "inflow": 14.7,
+   "precip": 3.83,
+   "evap": 16.21
+  },
+  {
+   "year": 2004,
+   "level": 342.532,
+   "area": 19274,
+   "volume": 113.62,
+   "inflow": 14.7,
+   "precip": 3.53,
+   "evap": 17.61
+  },
+  {
+   "year": 2005,
+   "level": 342.484,
+   "area": 19200,
+   "volume": 112.68,
+   "inflow": 14.7,
+   "precip": 1.99,
+   "evap": 18.47
+  },
+  {
+   "year": 2006,
+   "level": 342.431,
+   "area": 19119,
+   "volume": 111.68,
+   "inflow": 14.7,
+   "precip": 3.7,
+   "evap": 17.59
+  },
+  {
+   "year": 2007,
+   "level": 342.441,
+   "area": 19135,
+   "volume": 111.87,
+   "inflow": 14.7,
+   "precip": 2.69,
+   "evap": 17.79
+  },
+  {
+   "year": 2008,
+   "level": 342.336,
+   "area": 18975,
+   "volume": 109.87,
+   "inflow": 14.7,
+   "precip": 2.22,
+   "evap": 18.76
+  },
+  {
+   "year": 2009,
+   "level": 342.331,
+   "area": 18967,
+   "volume": 109.77,
+   "inflow": 14.7,
+   "precip": 3.56,
+   "evap": 16.27
+  },
+  {
+   "year": 2010,
+   "level": 342.402,
+   "area": 19075,
+   "volume": 111.13,
+   "inflow": 14.7,
+   "precip": 3.6,
+   "evap": 17.46
+  },
+  {
+   "year": 2011,
+   "level": 342.4,
+   "area": 19073,
+   "volume": 111.09,
+   "inflow": 14.7,
+   "precip": 3.19,
+   "evap": 17.45
+  },
+  {
+   "year": 2012,
+   "level": 342.374,
+   "area": 19032,
+   "volume": 110.59,
+   "inflow": 14.7,
+   "precip": 2.61,
+   "evap": 17.76
+  },
+  {
+   "year": 2013,
+   "level": 342.372,
+   "area": 19029,
+   "volume": 110.55,
+   "inflow": 14.7,
+   "precip": 3.16,
+   "evap": 17.47
+  },
+  {
+   "year": 2014,
+   "level": 342.361,
+   "area": 19013,
+   "volume": 110.35,
+   "inflow": 14.7,
+   "precip": 3.05,
+   "evap": 17.39
+  },
+  {
+   "year": 2015,
+   "level": 342.339,
+   "area": 18979,
+   "volume": 109.93,
+   "inflow": 14.7,
+   "precip": 4.08,
+   "evap": 18.18
+  },
+  {
+   "year": 2016,
+   "level": 342.36,
+   "area": 19012,
+   "volume": 110.33,
+   "inflow": 14.7,
+   "precip": 3.63,
+   "evap": 17.5
+  },
+  {
+   "year": 2017,
+   "level": 342.366,
+   "area": 19020,
+   "volume": 110.44,
+   "inflow": 14.7,
+   "precip": 2.7,
+   "evap": 17.88
+  },
+  {
+   "year": 2018,
+   "level": 342.342,
+   "area": 18984,
+   "volume": 109.98,
+   "inflow": 14.7,
+   "precip": 3.52,
+   "evap": 17.64
+  },
+  {
+   "year": 2019,
+   "level": 342.379,
+   "area": 19040,
+   "volume": 110.69,
+   "inflow": 14.7,
+   "precip": 3.5,
+   "evap": 17.52
+  },
+  {
+   "year": 2020,
+   "level": 342.31,
+   "area": 18935,
+   "volume": 109.38,
+   "inflow": 14.7,
+   "precip": 2.05,
+   "evap": 18.42
+  },
+  {
+   "year": 2021,
+   "level": 342.205,
+   "area": 18775,
+   "volume": 107.4,
+   "inflow": 14.7,
+   "precip": 2.03,
+   "evap": 18.55
+  },
+  {
+   "year": 2022,
+   "level": 342.131,
+   "area": 18661,
+   "volume": 106.0,
+   "inflow": 14.7,
+   "precip": 3.41,
+   "evap": 18.36
+  },
+  {
+   "year": 2023,
+   "level": 342.137,
+   "area": 18670,
+   "volume": 106.12,
+   "inflow": 14.7,
+   "precip": 4.2,
+   "evap": 17.79
+  },
+  {
+   "year": 2024,
+   "level": 342.207,
+   "area": 18777,
+   "volume": 107.43,
+   "inflow": 14.7,
+   "precip": 4.25,
+   "evap": 16.87
+  }
+ ],
+ "scenarios": {
+  "current": {
+   "anchors": [
+    [
+     2024,
+     14.7,
+     3.53,
+     17.1
+    ]
+   ],
+   "rows": [
+    {
+     "year": 2025,
+     "level": 342.221,
+     "area": 18798,
+     "volume": 107.69,
+     "inflow": 14.7,
+     "precip": 3.13,
+     "evap": 17.25
+    },
+    {
+     "year": 2026,
+     "level": 342.231,
+     "area": 18814,
+     "volume": 107.89,
+     "inflow": 14.7,
+     "precip": 3.13,
+     "evap": 17.26
+    },
+    {
+     "year": 2027,
+     "level": 342.241,
+     "area": 18829,
+     "volume": 108.07,
+     "inflow": 14.7,
+     "precip": 3.14,
+     "evap": 17.27
+    },
+    {
+     "year": 2028,
+     "level": 342.25,
+     "area": 18843,
+     "volume": 108.24,
+     "inflow": 14.7,
+     "precip": 3.14,
+     "evap": 17.29
+    },
+    {
+     "year": 2029,
+     "level": 342.259,
+     "area": 18856,
+     "volume": 108.4,
+     "inflow": 14.7,
+     "precip": 3.14,
+     "evap": 17.3
+    },
+    {
+     "year": 2030,
+     "level": 342.267,
+     "area": 18868,
+     "volume": 108.56,
+     "inflow": 14.7,
+     "precip": 3.14,
+     "evap": 17.31
+    },
+    {
+     "year": 2031,
+     "level": 342.274,
+     "area": 18880,
+     "volume": 108.7,
+     "inflow": 14.7,
+     "precip": 3.14,
+     "evap": 17.32
+    },
+    {
+     "year": 2032,
+     "level": 342.281,
+     "area": 18891,
+     "volume": 108.84,
+     "inflow": 14.7,
+     "precip": 3.15,
+     "evap": 17.33
+    },
+    {
+     "year": 2033,
+     "level": 342.288,
+     "area": 18901,
+     "volume": 108.96,
+     "inflow": 14.7,
+     "precip": 3.15,
+     "evap": 17.34
+    },
+    {
+     "year": 2034,
+     "level": 342.295,
+     "area": 18911,
+     "volume": 109.08,
+     "inflow": 14.7,
+     "precip": 3.15,
+     "evap": 17.35
+    },
+    {
+     "year": 2035,
+     "level": 342.301,
+     "area": 18920,
+     "volume": 109.2,
+     "inflow": 14.7,
+     "precip": 3.15,
+     "evap": 17.36
+    },
+    {
+     "year": 2036,
+     "level": 342.306,
+     "area": 18929,
+     "volume": 109.3,
+     "inflow": 14.7,
+     "precip": 3.15,
+     "evap": 17.37
+    },
+    {
+     "year": 2037,
+     "level": 342.311,
+     "area": 18937,
+     "volume": 109.4,
+     "inflow": 14.7,
+     "precip": 3.15,
+     "evap": 17.37
+    },
+    {
+     "year": 2038,
+     "level": 342.316,
+     "area": 18944,
+     "volume": 109.49,
+     "inflow": 14.7,
+     "precip": 3.15,
+     "evap": 17.38
+    },
+    {
+     "year": 2039,
+     "level": 342.321,
+     "area": 18951,
+     "volume": 109.58,
+     "inflow": 14.7,
+     "precip": 3.16,
+     "evap": 17.39
+    },
+    {
+     "year": 2040,
+     "level": 342.325,
+     "area": 18958,
+     "volume": 109.67,
+     "inflow": 14.7,
+     "precip": 3.16,
+     "evap": 17.39
+    },
+    {
+     "year": 2041,
+     "level": 342.33,
+     "area": 18964,
+     "volume": 109.74,
+     "inflow": 14.7,
+     "precip": 3.16,
+     "evap": 17.4
+    },
+    {
+     "year": 2042,
+     "level": 342.333,
+     "area": 18970,
+     "volume": 109.82,
+     "inflow": 14.7,
+     "precip": 3.16,
+     "evap": 17.4
+    },
+    {
+     "year": 2043,
+     "level": 342.337,
+     "area": 18976,
+     "volume": 109.89,
+     "inflow": 14.7,
+     "precip": 3.16,
+     "evap": 17.41
+    },
+    {
+     "year": 2044,
+     "level": 342.341,
+     "area": 18981,
+     "volume": 109.95,
+     "inflow": 14.7,
+     "precip": 3.16,
+     "evap": 17.41
+    },
+    {
+     "year": 2045,
+     "level": 342.344,
+     "area": 18986,
+     "volume": 110.01,
+     "inflow": 14.7,
+     "precip": 3.16,
+     "evap": 17.42
+    },
+    {
+     "year": 2046,
+     "level": 342.347,
+     "area": 18991,
+     "volume": 110.07,
+     "inflow": 14.7,
+     "precip": 3.16,
+     "evap": 17.42
+    },
+    {
+     "year": 2047,
+     "level": 342.35,
+     "area": 18995,
+     "volume": 110.13,
+     "inflow": 14.7,
+     "precip": 3.16,
+     "evap": 17.43
+    },
+    {
+     "year": 2048,
+     "level": 342.352,
+     "area": 18999,
+     "volume": 110.18,
+     "inflow": 14.7,
+     "precip": 3.16,
+     "evap": 17.43
+    },
+    {
+     "year": 2049,
+     "level": 342.355,
+     "area": 19003,
+     "volume": 110.23,
+     "inflow": 14.7,
+     "precip": 3.16,
+     "evap": 17.43
+    },
+    {
+     "year": 2050,
+     "level": 342.357,
+     "area": 19007,
+     "volume": 110.27,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.44
+    },
+    {
+     "year": 2051,
+     "level": 342.36,
+     "area": 19010,
+     "volume": 110.31,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.44
+    },
+    {
+     "year": 2052,
+     "level": 342.362,
+     "area": 19014,
+     "volume": 110.35,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.44
+    },
+    {
+     "year": 2053,
+     "level": 342.364,
+     "area": 19017,
+     "volume": 110.39,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.45
+    },
+    {
+     "year": 2054,
+     "level": 342.366,
+     "area": 19019,
+     "volume": 110.43,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.45
+    },
+    {
+     "year": 2055,
+     "level": 342.367,
+     "area": 19022,
+     "volume": 110.46,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.45
+    },
+    {
+     "year": 2056,
+     "level": 342.369,
+     "area": 19025,
+     "volume": 110.49,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.45
+    },
+    {
+     "year": 2057,
+     "level": 342.371,
+     "area": 19027,
+     "volume": 110.52,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.46
+    },
+    {
+     "year": 2058,
+     "level": 342.372,
+     "area": 19029,
+     "volume": 110.55,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.46
+    },
+    {
+     "year": 2059,
+     "level": 342.373,
+     "area": 19031,
+     "volume": 110.58,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.46
+    },
+    {
+     "year": 2060,
+     "level": 342.375,
+     "area": 19033,
+     "volume": 110.6,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.46
+    },
+    {
+     "year": 2061,
+     "level": 342.376,
+     "area": 19035,
+     "volume": 110.63,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.46
+    },
+    {
+     "year": 2062,
+     "level": 342.377,
+     "area": 19037,
+     "volume": 110.65,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.46
+    },
+    {
+     "year": 2063,
+     "level": 342.378,
+     "area": 19039,
+     "volume": 110.67,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.47
+    },
+    {
+     "year": 2064,
+     "level": 342.379,
+     "area": 19040,
+     "volume": 110.69,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.47
+    },
+    {
+     "year": 2065,
+     "level": 342.38,
+     "area": 19042,
+     "volume": 110.71,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.47
+    },
+    {
+     "year": 2066,
+     "level": 342.381,
+     "area": 19043,
+     "volume": 110.72,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.47
+    },
+    {
+     "year": 2067,
+     "level": 342.382,
+     "area": 19045,
+     "volume": 110.74,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.47
+    },
+    {
+     "year": 2068,
+     "level": 342.383,
+     "area": 19046,
+     "volume": 110.76,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.47
+    },
+    {
+     "year": 2069,
+     "level": 342.383,
+     "area": 19047,
+     "volume": 110.77,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.47
+    },
+    {
+     "year": 2070,
+     "level": 342.384,
+     "area": 19048,
+     "volume": 110.78,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.47
+    },
+    {
+     "year": 2071,
+     "level": 342.385,
+     "area": 19049,
+     "volume": 110.8,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2072,
+     "level": 342.385,
+     "area": 19050,
+     "volume": 110.81,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2073,
+     "level": 342.386,
+     "area": 19051,
+     "volume": 110.82,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2074,
+     "level": 342.387,
+     "area": 19052,
+     "volume": 110.83,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2075,
+     "level": 342.387,
+     "area": 19053,
+     "volume": 110.84,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2076,
+     "level": 342.388,
+     "area": 19053,
+     "volume": 110.85,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2077,
+     "level": 342.388,
+     "area": 19054,
+     "volume": 110.86,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2078,
+     "level": 342.389,
+     "area": 19055,
+     "volume": 110.87,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2079,
+     "level": 342.389,
+     "area": 19055,
+     "volume": 110.88,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2080,
+     "level": 342.389,
+     "area": 19056,
+     "volume": 110.88,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2081,
+     "level": 342.39,
+     "area": 19056,
+     "volume": 110.89,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2082,
+     "level": 342.39,
+     "area": 19057,
+     "volume": 110.9,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2083,
+     "level": 342.39,
+     "area": 19058,
+     "volume": 110.9,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2084,
+     "level": 342.391,
+     "area": 19058,
+     "volume": 110.91,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2085,
+     "level": 342.391,
+     "area": 19058,
+     "volume": 110.91,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2086,
+     "level": 342.391,
+     "area": 19059,
+     "volume": 110.92,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.48
+    },
+    {
+     "year": 2087,
+     "level": 342.392,
+     "area": 19059,
+     "volume": 110.92,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2088,
+     "level": 342.392,
+     "area": 19060,
+     "volume": 110.93,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2089,
+     "level": 342.392,
+     "area": 19060,
+     "volume": 110.93,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2090,
+     "level": 342.392,
+     "area": 19060,
+     "volume": 110.94,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2091,
+     "level": 342.392,
+     "area": 19061,
+     "volume": 110.94,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2092,
+     "level": 342.393,
+     "area": 19061,
+     "volume": 110.94,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2093,
+     "level": 342.393,
+     "area": 19061,
+     "volume": 110.95,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2094,
+     "level": 342.393,
+     "area": 19061,
+     "volume": 110.95,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2095,
+     "level": 342.393,
+     "area": 19062,
+     "volume": 110.95,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2096,
+     "level": 342.393,
+     "area": 19062,
+     "volume": 110.96,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2097,
+     "level": 342.393,
+     "area": 19062,
+     "volume": 110.96,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2098,
+     "level": 342.394,
+     "area": 19062,
+     "volume": 110.96,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2099,
+     "level": 342.394,
+     "area": 19062,
+     "volume": 110.96,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    },
+    {
+     "year": 2100,
+     "level": 342.394,
+     "area": 19063,
+     "volume": 110.97,
+     "inflow": 14.7,
+     "precip": 3.17,
+     "evap": 17.49
+    }
+   ],
+   "equilibrium": {
+    "area": 19106,
+    "level": 342.42,
+    "volume": 111.5,
+    "extrapolated": false
+   }
+  },
+  "ssp245-q50": {
+   "anchors": [
+    [
+     2024,
+     14.7,
+     3.53,
+     17.1
+    ],
+    [
+     2030,
+     12.1,
+     3.73,
+     20.7
+    ],
+    [
+     2040,
+     11.3,
+     3.68,
+     20.9
+    ],
+    [
+     2050,
+     10.5,
+     3.73,
+     21.1
+    ]
+   ],
+   "rows": [
+    {
+     "year": 2025,
+     "level": 342.193,
+     "area": 18755,
+     "volume": 107.16,
+     "inflow": 14.27,
+     "precip": 3.15,
+     "evap": 17.82
+    },
+    {
+     "year": 2026,
+     "level": 342.124,
+     "area": 18650,
+     "volume": 105.88,
+     "inflow": 13.83,
+     "precip": 3.17,
+     "evap": 18.32
+    },
+    {
+     "year": 2027,
+     "level": 342.007,
+     "area": 18471,
+     "volume": 103.71,
+     "inflow": 13.4,
+     "precip": 3.17,
+     "evap": 18.75
+    },
+    {
+     "year": 2028,
+     "level": 341.844,
+     "area": 18222,
+     "volume": 100.71,
+     "inflow": 12.97,
+     "precip": 3.15,
+     "evap": 19.09
+    },
+    {
+     "year": 2029,
+     "level": 341.636,
+     "area": 17905,
+     "volume": 96.97,
+     "inflow": 12.53,
+     "precip": 3.13,
+     "evap": 19.34
+    },
+    {
+     "year": 2030,
+     "level": 341.387,
+     "area": 17524,
+     "volume": 92.55,
+     "inflow": 12.1,
+     "precip": 3.08,
+     "evap": 19.49
+    },
+    {
+     "year": 2031,
+     "level": 341.126,
+     "area": 17016,
+     "volume": 88.03,
+     "inflow": 12.02,
+     "precip": 3.0,
+     "evap": 18.97
+    },
+    {
+     "year": 2032,
+     "level": 340.879,
+     "area": 16484,
+     "volume": 83.89,
+     "inflow": 11.94,
+     "precip": 2.9,
+     "evap": 18.41
+    },
+    {
+     "year": 2033,
+     "level": 340.647,
+     "area": 15985,
+     "volume": 80.13,
+     "inflow": 11.86,
+     "precip": 2.81,
+     "evap": 17.87
+    },
+    {
+     "year": 2034,
+     "level": 340.431,
+     "area": 15519,
+     "volume": 76.73,
+     "inflow": 11.78,
+     "precip": 2.72,
+     "evap": 17.37
+    },
+    {
+     "year": 2035,
+     "level": 340.229,
+     "area": 15085,
+     "volume": 73.64,
+     "inflow": 11.7,
+     "precip": 2.64,
+     "evap": 16.9
+    },
+    {
+     "year": 2036,
+     "level": 340.042,
+     "area": 14682,
+     "volume": 70.85,
+     "inflow": 11.62,
+     "precip": 2.57,
+     "evap": 16.46
+    },
+    {
+     "year": 2037,
+     "level": 339.868,
+     "area": 14307,
+     "volume": 68.33,
+     "inflow": 11.54,
+     "precip": 2.5,
+     "evap": 16.06
+    },
+    {
+     "year": 2038,
+     "level": 339.706,
+     "area": 13960,
+     "volume": 66.05,
+     "inflow": 11.46,
+     "precip": 2.44,
+     "evap": 15.68
+    },
+    {
+     "year": 2039,
+     "level": 339.557,
+     "area": 13638,
+     "volume": 63.98,
+     "inflow": 11.38,
+     "precip": 2.38,
+     "evap": 15.34
+    },
+    {
+     "year": 2040,
+     "level": 339.418,
+     "area": 13340,
+     "volume": 62.12,
+     "inflow": 11.3,
+     "precip": 2.32,
+     "evap": 15.03
+    },
+    {
+     "year": 2041,
+     "level": 339.289,
+     "area": 13069,
+     "volume": 60.42,
+     "inflow": 11.22,
+     "precip": 2.28,
+     "evap": 14.76
+    },
+    {
+     "year": 2042,
+     "level": 339.169,
+     "area": 12883,
+     "volume": 58.85,
+     "inflow": 11.14,
+     "precip": 2.25,
+     "evap": 14.52
+    },
+    {
+     "year": 2043,
+     "level": 339.054,
+     "area": 12707,
+     "volume": 57.38,
+     "inflow": 11.06,
+     "precip": 2.22,
+     "evap": 14.32
+    },
+    {
+     "year": 2044,
+     "level": 338.943,
+     "area": 12538,
+     "volume": 55.99,
+     "inflow": 10.98,
+     "precip": 2.19,
+     "evap": 14.15
+    },
+    {
+     "year": 2045,
+     "level": 338.837,
+     "area": 12375,
+     "volume": 54.66,
+     "inflow": 10.9,
+     "precip": 2.17,
+     "evap": 13.98
+    },
+    {
+     "year": 2046,
+     "level": 338.734,
+     "area": 12217,
+     "volume": 53.4,
+     "inflow": 10.82,
+     "precip": 2.14,
+     "evap": 13.81
+    },
+    {
+     "year": 2047,
+     "level": 338.635,
+     "area": 12065,
+     "volume": 52.19,
+     "inflow": 10.74,
+     "precip": 2.12,
+     "evap": 13.65
+    },
+    {
+     "year": 2048,
+     "level": 338.539,
+     "area": 11917,
+     "volume": 51.04,
+     "inflow": 10.66,
+     "precip": 2.09,
+     "evap": 13.5
+    },
+    {
+     "year": 2049,
+     "level": 338.446,
+     "area": 11774,
+     "volume": 49.93,
+     "inflow": 10.58,
+     "precip": 2.07,
+     "evap": 13.35
+    },
+    {
+     "year": 2050,
+     "level": 338.355,
+     "area": 11635,
+     "volume": 48.88,
+     "inflow": 10.5,
+     "precip": 2.05,
+     "evap": 13.2
+    },
+    {
+     "year": 2051,
+     "level": 338.271,
+     "area": 11506,
+     "volume": 47.9,
+     "inflow": 10.5,
+     "precip": 2.03,
+     "evap": 13.06
+    },
+    {
+     "year": 2052,
+     "level": 338.196,
+     "area": 11392,
+     "volume": 47.05,
+     "inflow": 10.5,
+     "precip": 2.01,
+     "evap": 12.93
+    },
+    {
+     "year": 2053,
+     "level": 338.13,
+     "area": 11290,
+     "volume": 46.3,
+     "inflow": 10.5,
+     "precip": 1.99,
+     "evap": 12.81
+    },
+    {
+     "year": 2054,
+     "level": 338.071,
+     "area": 11200,
+     "volume": 45.64,
+     "inflow": 10.5,
+     "precip": 1.97,
+     "evap": 12.71
+    },
+    {
+     "year": 2055,
+     "level": 338.019,
+     "area": 11120,
+     "volume": 45.06,
+     "inflow": 10.5,
+     "precip": 1.96,
+     "evap": 12.62
+    },
+    {
+     "year": 2056,
+     "level": 337.974,
+     "area": 11050,
+     "volume": 44.55,
+     "inflow": 10.5,
+     "precip": 1.95,
+     "evap": 12.54
+    },
+    {
+     "year": 2057,
+     "level": 337.934,
+     "area": 10988,
+     "volume": 44.11,
+     "inflow": 10.5,
+     "precip": 1.94,
+     "evap": 12.47
+    },
+    {
+     "year": 2058,
+     "level": 337.898,
+     "area": 10934,
+     "volume": 43.72,
+     "inflow": 10.5,
+     "precip": 1.93,
+     "evap": 12.41
+    },
+    {
+     "year": 2059,
+     "level": 337.867,
+     "area": 10886,
+     "volume": 43.38,
+     "inflow": 10.5,
+     "precip": 1.92,
+     "evap": 12.35
+    },
+    {
+     "year": 2060,
+     "level": 337.84,
+     "area": 10845,
+     "volume": 43.08,
+     "inflow": 10.5,
+     "precip": 1.91,
+     "evap": 12.3
+    },
+    {
+     "year": 2061,
+     "level": 337.816,
+     "area": 10808,
+     "volume": 42.82,
+     "inflow": 10.5,
+     "precip": 1.9,
+     "evap": 12.26
+    },
+    {
+     "year": 2062,
+     "level": 337.795,
+     "area": 10776,
+     "volume": 42.6,
+     "inflow": 10.5,
+     "precip": 1.9,
+     "evap": 12.23
+    },
+    {
+     "year": 2063,
+     "level": 337.777,
+     "area": 10748,
+     "volume": 42.4,
+     "inflow": 10.5,
+     "precip": 1.89,
+     "evap": 12.19
+    },
+    {
+     "year": 2064,
+     "level": 337.761,
+     "area": 10723,
+     "volume": 42.23,
+     "inflow": 10.5,
+     "precip": 1.89,
+     "evap": 12.17
+    },
+    {
+     "year": 2065,
+     "level": 337.747,
+     "area": 10702,
+     "volume": 42.08,
+     "inflow": 10.5,
+     "precip": 1.88,
+     "evap": 12.14
+    },
+    {
+     "year": 2066,
+     "level": 337.734,
+     "area": 10683,
+     "volume": 41.95,
+     "inflow": 10.5,
+     "precip": 1.88,
+     "evap": 12.12
+    },
+    {
+     "year": 2067,
+     "level": 337.724,
+     "area": 10667,
+     "volume": 41.84,
+     "inflow": 10.5,
+     "precip": 1.88,
+     "evap": 12.1
+    },
+    {
+     "year": 2068,
+     "level": 337.715,
+     "area": 10653,
+     "volume": 41.74,
+     "inflow": 10.5,
+     "precip": 1.88,
+     "evap": 12.08
+    },
+    {
+     "year": 2069,
+     "level": 337.706,
+     "area": 10640,
+     "volume": 41.65,
+     "inflow": 10.5,
+     "precip": 1.87,
+     "evap": 12.07
+    },
+    {
+     "year": 2070,
+     "level": 337.699,
+     "area": 10629,
+     "volume": 41.58,
+     "inflow": 10.5,
+     "precip": 1.87,
+     "evap": 12.06
+    },
+    {
+     "year": 2071,
+     "level": 337.693,
+     "area": 10620,
+     "volume": 41.51,
+     "inflow": 10.5,
+     "precip": 1.87,
+     "evap": 12.05
+    },
+    {
+     "year": 2072,
+     "level": 337.688,
+     "area": 10612,
+     "volume": 41.45,
+     "inflow": 10.5,
+     "precip": 1.87,
+     "evap": 12.04
+    },
+    {
+     "year": 2073,
+     "level": 337.683,
+     "area": 10604,
+     "volume": 41.4,
+     "inflow": 10.5,
+     "precip": 1.87,
+     "evap": 12.03
+    },
+    {
+     "year": 2074,
+     "level": 337.679,
+     "area": 10598,
+     "volume": 41.36,
+     "inflow": 10.5,
+     "precip": 1.87,
+     "evap": 12.02
+    },
+    {
+     "year": 2075,
+     "level": 337.676,
+     "area": 10593,
+     "volume": 41.32,
+     "inflow": 10.5,
+     "precip": 1.87,
+     "evap": 12.02
+    },
+    {
+     "year": 2076,
+     "level": 337.673,
+     "area": 10588,
+     "volume": 41.29,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 12.01
+    },
+    {
+     "year": 2077,
+     "level": 337.67,
+     "area": 10584,
+     "volume": 41.26,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 12.01
+    },
+    {
+     "year": 2078,
+     "level": 337.668,
+     "area": 10580,
+     "volume": 41.24,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 12.0
+    },
+    {
+     "year": 2079,
+     "level": 337.666,
+     "area": 10577,
+     "volume": 41.22,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 12.0
+    },
+    {
+     "year": 2080,
+     "level": 337.664,
+     "area": 10575,
+     "volume": 41.2,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 12.0
+    },
+    {
+     "year": 2081,
+     "level": 337.662,
+     "area": 10572,
+     "volume": 41.18,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.99
+    },
+    {
+     "year": 2082,
+     "level": 337.661,
+     "area": 10570,
+     "volume": 41.17,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.99
+    },
+    {
+     "year": 2083,
+     "level": 337.66,
+     "area": 10568,
+     "volume": 41.16,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.99
+    },
+    {
+     "year": 2084,
+     "level": 337.659,
+     "area": 10567,
+     "volume": 41.14,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.99
+    },
+    {
+     "year": 2085,
+     "level": 337.658,
+     "area": 10565,
+     "volume": 41.14,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.99
+    },
+    {
+     "year": 2086,
+     "level": 337.657,
+     "area": 10564,
+     "volume": 41.13,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2087,
+     "level": 337.656,
+     "area": 10563,
+     "volume": 41.12,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2088,
+     "level": 337.656,
+     "area": 10562,
+     "volume": 41.11,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2089,
+     "level": 337.655,
+     "area": 10562,
+     "volume": 41.11,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2090,
+     "level": 337.655,
+     "area": 10561,
+     "volume": 41.1,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2091,
+     "level": 337.655,
+     "area": 10560,
+     "volume": 41.1,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2092,
+     "level": 337.654,
+     "area": 10560,
+     "volume": 41.1,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2093,
+     "level": 337.654,
+     "area": 10559,
+     "volume": 41.09,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2094,
+     "level": 337.654,
+     "area": 10559,
+     "volume": 41.09,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2095,
+     "level": 337.653,
+     "area": 10559,
+     "volume": 41.09,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2096,
+     "level": 337.653,
+     "area": 10558,
+     "volume": 41.09,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2097,
+     "level": 337.653,
+     "area": 10558,
+     "volume": 41.09,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2098,
+     "level": 337.653,
+     "area": 10558,
+     "volume": 41.08,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2099,
+     "level": 337.653,
+     "area": 10558,
+     "volume": 41.08,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    },
+    {
+     "year": 2100,
+     "level": 337.653,
+     "area": 10558,
+     "volume": 41.08,
+     "inflow": 10.5,
+     "precip": 1.86,
+     "evap": 11.98
+    }
+   ],
+   "equilibrium": {
+    "area": 10603,
+    "level": 337.68,
+    "volume": 41.4,
+    "extrapolated": false
+   }
+  },
+  "ssp245-q75": {
+   "anchors": [
+    [
+     2024,
+     14.7,
+     3.53,
+     17.1
+    ],
+    [
+     2030,
+     9.32,
+     3.64,
+     20.4
+    ],
+    [
+     2040,
+     8.49,
+     3.57,
+     20.7
+    ],
+    [
+     2050,
+     7.64,
+     3.61,
+     20.9
+    ]
+   ],
+   "rows": [
+    {
+     "year": 2025,
+     "level": 342.181,
+     "area": 18737,
+     "volume": 106.94,
+     "inflow": 13.8,
+     "precip": 3.14,
+     "evap": 17.75
+    },
+    {
+     "year": 2026,
+     "level": 342.078,
+     "area": 18580,
+     "volume": 105.03,
+     "inflow": 12.91,
+     "precip": 3.13,
+     "evap": 18.16
+    },
+    {
+     "year": 2027,
+     "level": 341.906,
+     "area": 18318,
+     "volume": 101.86,
+     "inflow": 12.01,
+     "precip": 3.1,
+     "evap": 18.45
+    },
+    {
+     "year": 2028,
+     "level": 341.667,
+     "area": 17952,
+     "volume": 97.52,
+     "inflow": 11.11,
+     "precip": 3.06,
+     "evap": 18.63
+    },
+    {
+     "year": 2029,
+     "level": 341.363,
+     "area": 17488,
+     "volume": 92.13,
+     "inflow": 10.22,
+     "precip": 2.99,
+     "evap": 18.65
+    },
+    {
+     "year": 2030,
+     "level": 340.997,
+     "area": 16738,
+     "volume": 85.86,
+     "inflow": 9.32,
+     "precip": 2.89,
+     "evap": 18.41
+    },
+    {
+     "year": 2031,
+     "level": 340.614,
+     "area": 15914,
+     "volume": 79.61,
+     "inflow": 9.24,
+     "precip": 2.74,
+     "evap": 17.54
+    },
+    {
+     "year": 2032,
+     "level": 340.252,
+     "area": 15135,
+     "volume": 73.99,
+     "inflow": 9.15,
+     "precip": 2.6,
+     "evap": 16.7
+    },
+    {
+     "year": 2033,
+     "level": 339.912,
+     "area": 14402,
+     "volume": 68.96,
+     "inflow": 9.07,
+     "precip": 2.47,
+     "evap": 15.92
+    },
+    {
+     "year": 2034,
+     "level": 339.593,
+     "area": 13715,
+     "volume": 64.48,
+     "inflow": 8.99,
+     "precip": 2.35,
+     "evap": 15.18
+    },
+    {
+     "year": 2035,
+     "level": 339.296,
+     "area": 13079,
+     "volume": 60.5,
+     "inflow": 8.91,
+     "precip": 2.24,
+     "evap": 14.54
+    },
+    {
+     "year": 2036,
+     "level": 339.018,
+     "area": 12652,
+     "volume": 56.92,
+     "inflow": 8.82,
+     "precip": 2.15,
+     "evap": 14.02
+    },
+    {
+     "year": 2037,
+     "level": 338.754,
+     "area": 12247,
+     "volume": 53.64,
+     "inflow": 8.74,
+     "precip": 2.08,
+     "evap": 13.59
+    },
+    {
+     "year": 2038,
+     "level": 338.503,
+     "area": 11862,
+     "volume": 50.61,
+     "inflow": 8.66,
+     "precip": 2.01,
+     "evap": 13.19
+    },
+    {
+     "year": 2039,
+     "level": 338.265,
+     "area": 11498,
+     "volume": 47.84,
+     "inflow": 8.57,
+     "precip": 1.95,
+     "evap": 12.8
+    },
+    {
+     "year": 2040,
+     "level": 338.04,
+     "area": 11152,
+     "volume": 45.29,
+     "inflow": 8.49,
+     "precip": 1.88,
+     "evap": 12.43
+    },
+    {
+     "year": 2041,
+     "level": 337.828,
+     "area": 10827,
+     "volume": 42.96,
+     "inflow": 8.4,
+     "precip": 1.83,
+     "evap": 12.08
+    },
+    {
+     "year": 2042,
+     "level": 337.629,
+     "area": 10521,
+     "volume": 40.83,
+     "inflow": 8.32,
+     "precip": 1.78,
+     "evap": 11.75
+    },
+    {
+     "year": 2043,
+     "level": 337.442,
+     "area": 10234,
+     "volume": 38.89,
+     "inflow": 8.24,
+     "precip": 1.73,
+     "evap": 11.44
+    },
+    {
+     "year": 2044,
+     "level": 337.266,
+     "area": 9964,
+     "volume": 37.11,
+     "inflow": 8.15,
+     "precip": 1.69,
+     "evap": 11.14
+    },
+    {
+     "year": 2045,
+     "level": 337.102,
+     "area": 9687,
+     "volume": 35.5,
+     "inflow": 8.06,
+     "precip": 1.64,
+     "evap": 10.85
+    },
+    {
+     "year": 2046,
+     "level": 336.951,
+     "area": 9415,
+     "volume": 34.06,
+     "inflow": 7.98,
+     "precip": 1.6,
+     "evap": 10.57
+    },
+    {
+     "year": 2047,
+     "level": 336.811,
+     "area": 9164,
+     "volume": 32.76,
+     "inflow": 7.9,
+     "precip": 1.56,
+     "evap": 10.3
+    },
+    {
+     "year": 2048,
+     "level": 336.683,
+     "area": 8933,
+     "volume": 31.6,
+     "inflow": 7.81,
+     "precip": 1.52,
+     "evap": 10.05
+    },
+    {
+     "year": 2049,
+     "level": 336.565,
+     "area": 8721,
+     "volume": 30.56,
+     "inflow": 7.72,
+     "precip": 1.49,
+     "evap": 9.82
+    },
+    {
+     "year": 2050,
+     "level": 336.456,
+     "area": 8525,
+     "volume": 29.62,
+     "inflow": 7.64,
+     "precip": 1.46,
+     "evap": 9.61
+    },
+    {
+     "year": 2051,
+     "level": 336.36,
+     "area": 8353,
+     "volume": 28.81,
+     "inflow": 7.64,
+     "precip": 1.43,
+     "evap": 9.41
+    },
+    {
+     "year": 2052,
+     "level": 336.281,
+     "area": 8210,
+     "volume": 28.16,
+     "inflow": 7.64,
+     "precip": 1.4,
+     "evap": 9.25
+    },
+    {
+     "year": 2053,
+     "level": 336.216,
+     "area": 8093,
+     "volume": 27.62,
+     "inflow": 7.64,
+     "precip": 1.38,
+     "evap": 9.12
+    },
+    {
+     "year": 2054,
+     "level": 336.163,
+     "area": 7997,
+     "volume": 27.19,
+     "inflow": 7.64,
+     "precip": 1.36,
+     "evap": 9.01
+    },
+    {
+     "year": 2055,
+     "level": 336.119,
+     "area": 7918,
+     "volume": 26.85,
+     "inflow": 7.64,
+     "precip": 1.35,
+     "evap": 8.92
+    },
+    {
+     "year": 2056,
+     "level": 336.084,
+     "area": 7855,
+     "volume": 26.57,
+     "inflow": 7.64,
+     "precip": 1.34,
+     "evap": 8.85
+    },
+    {
+     "year": 2057,
+     "level": 336.055,
+     "area": 7803,
+     "volume": 26.35,
+     "inflow": 7.64,
+     "precip": 1.33,
+     "evap": 8.79
+    },
+    {
+     "year": 2058,
+     "level": 336.032,
+     "area": 7762,
+     "volume": 26.17,
+     "inflow": 7.64,
+     "precip": 1.32,
+     "evap": 8.74
+    },
+    {
+     "year": 2059,
+     "level": 336.013,
+     "area": 7728,
+     "volume": 26.02,
+     "inflow": 7.64,
+     "precip": 1.32,
+     "evap": 8.7
+    },
+    {
+     "year": 2060,
+     "level": 335.998,
+     "area": 7701,
+     "volume": 25.91,
+     "inflow": 7.64,
+     "precip": 1.31,
+     "evap": 8.67
+    },
+    {
+     "year": 2061,
+     "level": 335.987,
+     "area": 7680,
+     "volume": 25.82,
+     "inflow": 7.64,
+     "precip": 1.31,
+     "evap": 8.65
+    },
+    {
+     "year": 2062,
+     "level": 335.977,
+     "area": 7663,
+     "volume": 25.74,
+     "inflow": 7.64,
+     "precip": 1.31,
+     "evap": 8.63
+    },
+    {
+     "year": 2063,
+     "level": 335.969,
+     "area": 7649,
+     "volume": 25.68,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.61
+    },
+    {
+     "year": 2064,
+     "level": 335.963,
+     "area": 7638,
+     "volume": 25.64,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.6
+    },
+    {
+     "year": 2065,
+     "level": 335.958,
+     "area": 7629,
+     "volume": 25.6,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.59
+    },
+    {
+     "year": 2066,
+     "level": 335.954,
+     "area": 7622,
+     "volume": 25.57,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.58
+    },
+    {
+     "year": 2067,
+     "level": 335.951,
+     "area": 7617,
+     "volume": 25.55,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.58
+    },
+    {
+     "year": 2068,
+     "level": 335.949,
+     "area": 7612,
+     "volume": 25.53,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.57
+    },
+    {
+     "year": 2069,
+     "level": 335.947,
+     "area": 7609,
+     "volume": 25.51,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.57
+    },
+    {
+     "year": 2070,
+     "level": 335.945,
+     "area": 7606,
+     "volume": 25.5,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.56
+    },
+    {
+     "year": 2071,
+     "level": 335.944,
+     "area": 7604,
+     "volume": 25.49,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.56
+    },
+    {
+     "year": 2072,
+     "level": 335.943,
+     "area": 7602,
+     "volume": 25.48,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.56
+    },
+    {
+     "year": 2073,
+     "level": 335.942,
+     "area": 7600,
+     "volume": 25.48,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.56
+    },
+    {
+     "year": 2074,
+     "level": 335.942,
+     "area": 7599,
+     "volume": 25.47,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.56
+    },
+    {
+     "year": 2075,
+     "level": 335.941,
+     "area": 7598,
+     "volume": 25.47,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.56
+    },
+    {
+     "year": 2076,
+     "level": 335.941,
+     "area": 7598,
+     "volume": 25.46,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2077,
+     "level": 335.94,
+     "area": 7597,
+     "volume": 25.46,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2078,
+     "level": 335.94,
+     "area": 7596,
+     "volume": 25.46,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2079,
+     "level": 335.94,
+     "area": 7596,
+     "volume": 25.46,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2080,
+     "level": 335.94,
+     "area": 7596,
+     "volume": 25.46,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2081,
+     "level": 335.94,
+     "area": 7596,
+     "volume": 25.46,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2082,
+     "level": 335.94,
+     "area": 7595,
+     "volume": 25.46,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2083,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.46,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2084,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2085,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2086,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2087,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2088,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2089,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2090,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2091,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2092,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2093,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2094,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2095,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2096,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2097,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2098,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2099,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    },
+    {
+     "year": 2100,
+     "level": 335.939,
+     "area": 7595,
+     "volume": 25.45,
+     "inflow": 7.64,
+     "precip": 1.3,
+     "evap": 8.55
+    }
+   ],
+   "equilibrium": {
+    "area": 7646,
+    "level": 335.97,
+    "volume": 25.7,
+    "extrapolated": false
+   }
+  },
+  "ssp585-q50": {
+   "anchors": [
+    [
+     2024,
+     14.7,
+     3.53,
+     17.1
+    ],
+    [
+     2030,
+     12.2,
+     3.59,
+     21.0
+    ],
+    [
+     2040,
+     11.4,
+     3.73,
+     21.4
+    ],
+    [
+     2050,
+     10.2,
+     3.75,
+     21.6
+    ]
+   ],
+   "rows": [
+    {
+     "year": 2025,
+     "level": 342.191,
+     "area": 18753,
+     "volume": 107.13,
+     "inflow": 14.28,
+     "precip": 3.13,
+     "evap": 17.86
+    },
+    {
+     "year": 2026,
+     "level": 342.118,
+     "area": 18642,
+     "volume": 105.77,
+     "inflow": 13.87,
+     "precip": 3.12,
+     "evap": 18.42
+    },
+    {
+     "year": 2027,
+     "level": 341.994,
+     "area": 18452,
+     "volume": 103.47,
+     "inflow": 13.45,
+     "precip": 3.1,
+     "evap": 18.88
+    },
+    {
+     "year": 2028,
+     "level": 341.822,
+     "area": 18189,
+     "volume": 100.31,
+     "inflow": 13.03,
+     "precip": 3.07,
+     "evap": 19.25
+    },
+    {
+     "year": 2029,
+     "level": 341.603,
+     "area": 17854,
+     "volume": 96.37,
+     "inflow": 12.62,
+     "precip": 3.02,
+     "evap": 19.53
+    },
+    {
+     "year": 2030,
+     "level": 341.341,
+     "area": 17453,
+     "volume": 91.74,
+     "inflow": 12.2,
+     "precip": 2.95,
+     "evap": 19.68
+    },
+    {
+     "year": 2031,
+     "level": 341.066,
+     "area": 16887,
+     "volume": 87.02,
+     "inflow": 12.12,
+     "precip": 2.88,
+     "evap": 19.14
+    },
+    {
+     "year": 2032,
+     "level": 340.807,
+     "area": 16331,
+     "volume": 82.73,
+     "inflow": 12.04,
+     "precip": 2.8,
+     "evap": 18.54
+    },
+    {
+     "year": 2033,
+     "level": 340.566,
+     "area": 15811,
+     "volume": 78.85,
+     "inflow": 11.96,
+     "precip": 2.72,
+     "evap": 17.99
+    },
+    {
+     "year": 2034,
+     "level": 340.341,
+     "area": 15326,
+     "volume": 75.34,
+     "inflow": 11.88,
+     "precip": 2.64,
+     "evap": 17.47
+    },
+    {
+     "year": 2035,
+     "level": 340.132,
+     "area": 14877,
+     "volume": 72.19,
+     "inflow": 11.8,
+     "precip": 2.58,
+     "evap": 16.99
+    },
+    {
+     "year": 2036,
+     "level": 339.939,
+     "area": 14460,
+     "volume": 69.35,
+     "inflow": 11.72,
+     "precip": 2.51,
+     "evap": 16.55
+    },
+    {
+     "year": 2037,
+     "level": 339.76,
+     "area": 14075,
+     "volume": 66.8,
+     "inflow": 11.64,
+     "precip": 2.46,
+     "evap": 16.14
+    },
+    {
+     "year": 2038,
+     "level": 339.595,
+     "area": 13720,
+     "volume": 64.51,
+     "inflow": 11.56,
+     "precip": 2.4,
+     "evap": 15.76
+    },
+    {
+     "year": 2039,
+     "level": 339.442,
+     "area": 13392,
+     "volume": 62.44,
+     "inflow": 11.48,
+     "precip": 2.36,
+     "evap": 15.42
+    },
+    {
+     "year": 2040,
+     "level": 339.301,
+     "area": 13088,
+     "volume": 60.57,
+     "inflow": 11.4,
+     "precip": 2.32,
+     "evap": 15.13
+    },
+    {
+     "year": 2041,
+     "level": 339.168,
+     "area": 12883,
+     "volume": 58.84,
+     "inflow": 11.28,
+     "precip": 2.27,
+     "evap": 14.86
+    },
+    {
+     "year": 2042,
+     "level": 339.039,
+     "area": 12685,
+     "volume": 57.19,
+     "inflow": 11.16,
+     "precip": 2.24,
+     "evap": 14.63
+    },
+    {
+     "year": 2043,
+     "level": 338.913,
+     "area": 12491,
+     "volume": 55.61,
+     "inflow": 11.04,
+     "precip": 2.21,
+     "evap": 14.42
+    },
+    {
+     "year": 2044,
+     "level": 338.79,
+     "area": 12302,
+     "volume": 54.08,
+     "inflow": 10.92,
+     "precip": 2.17,
+     "evap": 14.21
+    },
+    {
+     "year": 2045,
+     "level": 338.668,
+     "area": 12116,
+     "volume": 52.59,
+     "inflow": 10.8,
+     "precip": 2.14,
+     "evap": 14.01
+    },
+    {
+     "year": 2046,
+     "level": 338.549,
+     "area": 11933,
+     "volume": 51.16,
+     "inflow": 10.68,
+     "precip": 2.11,
+     "evap": 13.82
+    },
+    {
+     "year": 2047,
+     "level": 338.432,
+     "area": 11753,
+     "volume": 49.77,
+     "inflow": 10.56,
+     "precip": 2.08,
+     "evap": 13.62
+    },
+    {
+     "year": 2048,
+     "level": 338.317,
+     "area": 11576,
+     "volume": 48.43,
+     "inflow": 10.44,
+     "precip": 2.05,
+     "evap": 13.43
+    },
+    {
+     "year": 2049,
+     "level": 338.203,
+     "area": 11402,
+     "volume": 47.13,
+     "inflow": 10.32,
+     "precip": 2.02,
+     "evap": 13.24
+    },
+    {
+     "year": 2050,
+     "level": 338.091,
+     "area": 11230,
+     "volume": 45.86,
+     "inflow": 10.2,
+     "precip": 1.99,
+     "evap": 13.05
+    },
+    {
+     "year": 2051,
+     "level": 337.987,
+     "area": 11071,
+     "volume": 44.7,
+     "inflow": 10.2,
+     "precip": 1.96,
+     "evap": 12.87
+    },
+    {
+     "year": 2052,
+     "level": 337.895,
+     "area": 10929,
+     "volume": 43.68,
+     "inflow": 10.2,
+     "precip": 1.94,
+     "evap": 12.7
+    },
+    {
+     "year": 2053,
+     "level": 337.814,
+     "area": 10804,
+     "volume": 42.8,
+     "inflow": 10.2,
+     "precip": 1.91,
+     "evap": 12.56
+    },
+    {
+     "year": 2054,
+     "level": 337.742,
+     "area": 10695,
+     "volume": 42.03,
+     "inflow": 10.2,
+     "precip": 1.89,
+     "evap": 12.43
+    },
+    {
+     "year": 2055,
+     "level": 337.68,
+     "area": 10599,
+     "volume": 41.37,
+     "inflow": 10.2,
+     "precip": 1.88,
+     "evap": 12.32
+    },
+    {
+     "year": 2056,
+     "level": 337.625,
+     "area": 10515,
+     "volume": 40.79,
+     "inflow": 10.2,
+     "precip": 1.86,
+     "evap": 12.22
+    },
+    {
+     "year": 2057,
+     "level": 337.577,
+     "area": 10442,
+     "volume": 40.29,
+     "inflow": 10.2,
+     "precip": 1.85,
+     "evap": 12.13
+    },
+    {
+     "year": 2058,
+     "level": 337.536,
+     "area": 10378,
+     "volume": 39.85,
+     "inflow": 10.2,
+     "precip": 1.84,
+     "evap": 12.06
+    },
+    {
+     "year": 2059,
+     "level": 337.499,
+     "area": 10322,
+     "volume": 39.48,
+     "inflow": 10.2,
+     "precip": 1.83,
+     "evap": 11.99
+    },
+    {
+     "year": 2060,
+     "level": 337.468,
+     "area": 10274,
+     "volume": 39.16,
+     "inflow": 10.2,
+     "precip": 1.82,
+     "evap": 11.94
+    },
+    {
+     "year": 2061,
+     "level": 337.441,
+     "area": 10232,
+     "volume": 38.88,
+     "inflow": 10.2,
+     "precip": 1.81,
+     "evap": 11.89
+    },
+    {
+     "year": 2062,
+     "level": 337.417,
+     "area": 10196,
+     "volume": 38.64,
+     "inflow": 10.2,
+     "precip": 1.81,
+     "evap": 11.85
+    },
+    {
+     "year": 2063,
+     "level": 337.397,
+     "area": 10165,
+     "volume": 38.43,
+     "inflow": 10.2,
+     "precip": 1.8,
+     "evap": 11.81
+    },
+    {
+     "year": 2064,
+     "level": 337.379,
+     "area": 10138,
+     "volume": 38.25,
+     "inflow": 10.2,
+     "precip": 1.79,
+     "evap": 11.78
+    },
+    {
+     "year": 2065,
+     "level": 337.364,
+     "area": 10115,
+     "volume": 38.1,
+     "inflow": 10.2,
+     "precip": 1.79,
+     "evap": 11.75
+    },
+    {
+     "year": 2066,
+     "level": 337.351,
+     "area": 10095,
+     "volume": 37.97,
+     "inflow": 10.2,
+     "precip": 1.79,
+     "evap": 11.72
+    },
+    {
+     "year": 2067,
+     "level": 337.34,
+     "area": 10078,
+     "volume": 37.85,
+     "inflow": 10.2,
+     "precip": 1.78,
+     "evap": 11.7
+    },
+    {
+     "year": 2068,
+     "level": 337.33,
+     "area": 10063,
+     "volume": 37.76,
+     "inflow": 10.2,
+     "precip": 1.78,
+     "evap": 11.69
+    },
+    {
+     "year": 2069,
+     "level": 337.322,
+     "area": 10051,
+     "volume": 37.68,
+     "inflow": 10.2,
+     "precip": 1.78,
+     "evap": 11.67
+    },
+    {
+     "year": 2070,
+     "level": 337.315,
+     "area": 10040,
+     "volume": 37.61,
+     "inflow": 10.2,
+     "precip": 1.78,
+     "evap": 11.66
+    },
+    {
+     "year": 2071,
+     "level": 337.309,
+     "area": 10030,
+     "volume": 37.54,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.65
+    },
+    {
+     "year": 2072,
+     "level": 337.304,
+     "area": 10023,
+     "volume": 37.49,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.64
+    },
+    {
+     "year": 2073,
+     "level": 337.3,
+     "area": 10016,
+     "volume": 37.45,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.63
+    },
+    {
+     "year": 2074,
+     "level": 337.296,
+     "area": 10010,
+     "volume": 37.41,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.62
+    },
+    {
+     "year": 2075,
+     "level": 337.293,
+     "area": 10005,
+     "volume": 37.38,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.62
+    },
+    {
+     "year": 2076,
+     "level": 337.29,
+     "area": 10001,
+     "volume": 37.35,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.61
+    },
+    {
+     "year": 2077,
+     "level": 337.287,
+     "area": 9997,
+     "volume": 37.33,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.61
+    },
+    {
+     "year": 2078,
+     "level": 337.285,
+     "area": 9994,
+     "volume": 37.31,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.6
+    },
+    {
+     "year": 2079,
+     "level": 337.284,
+     "area": 9991,
+     "volume": 37.29,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.6
+    },
+    {
+     "year": 2080,
+     "level": 337.282,
+     "area": 9989,
+     "volume": 37.27,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.6
+    },
+    {
+     "year": 2081,
+     "level": 337.281,
+     "area": 9987,
+     "volume": 37.26,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.59
+    },
+    {
+     "year": 2082,
+     "level": 337.28,
+     "area": 9985,
+     "volume": 37.25,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.59
+    },
+    {
+     "year": 2083,
+     "level": 337.279,
+     "area": 9984,
+     "volume": 37.24,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.59
+    },
+    {
+     "year": 2084,
+     "level": 337.278,
+     "area": 9983,
+     "volume": 37.23,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.59
+    },
+    {
+     "year": 2085,
+     "level": 337.277,
+     "area": 9982,
+     "volume": 37.23,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.59
+    },
+    {
+     "year": 2086,
+     "level": 337.277,
+     "area": 9981,
+     "volume": 37.22,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.59
+    },
+    {
+     "year": 2087,
+     "level": 337.276,
+     "area": 9980,
+     "volume": 37.22,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.59
+    },
+    {
+     "year": 2088,
+     "level": 337.276,
+     "area": 9980,
+     "volume": 37.21,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.59
+    },
+    {
+     "year": 2089,
+     "level": 337.276,
+     "area": 9979,
+     "volume": 37.21,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.58
+    },
+    {
+     "year": 2090,
+     "level": 337.275,
+     "area": 9979,
+     "volume": 37.21,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.58
+    },
+    {
+     "year": 2091,
+     "level": 337.275,
+     "area": 9978,
+     "volume": 37.2,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.58
+    },
+    {
+     "year": 2092,
+     "level": 337.275,
+     "area": 9978,
+     "volume": 37.2,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.58
+    },
+    {
+     "year": 2093,
+     "level": 337.275,
+     "area": 9978,
+     "volume": 37.2,
+     "inflow": 10.2,
+     "precip": 1.77,
+     "evap": 11.58
+    },
+    {
+     "year": 2094,
+     "level": 337.275,
+     "area": 9977,
+     "volume": 37.2,
+     "inflow": 10.2,
+     "precip": 1.76,
+     "evap": 11.58
+    },
+    {
+     "year": 2095,
+     "level": 337.274,
+     "area": 9977,
+     "volume": 37.2,
+     "inflow": 10.2,
+     "precip": 1.76,
+     "evap": 11.58
+    },
+    {
+     "year": 2096,
+     "level": 337.274,
+     "area": 9977,
+     "volume": 37.2,
+     "inflow": 10.2,
+     "precip": 1.76,
+     "evap": 11.58
+    },
+    {
+     "year": 2097,
+     "level": 337.274,
+     "area": 9977,
+     "volume": 37.2,
+     "inflow": 10.2,
+     "precip": 1.76,
+     "evap": 11.58
+    },
+    {
+     "year": 2098,
+     "level": 337.274,
+     "area": 9977,
+     "volume": 37.19,
+     "inflow": 10.2,
+     "precip": 1.76,
+     "evap": 11.58
+    },
+    {
+     "year": 2099,
+     "level": 337.274,
+     "area": 9977,
+     "volume": 37.19,
+     "inflow": 10.2,
+     "precip": 1.76,
+     "evap": 11.58
+    },
+    {
+     "year": 2100,
+     "level": 337.274,
+     "area": 9977,
+     "volume": 37.19,
+     "inflow": 10.2,
+     "precip": 1.76,
+     "evap": 11.58
+    }
+   ],
+   "equilibrium": {
+    "area": 10017,
+    "level": 337.3,
+    "volume": 37.5,
+    "extrapolated": false
+   }
+  },
+  "ssp585-q75": {
+   "anchors": [
+    [
+     2024,
+     14.7,
+     3.53,
+     17.1
+    ],
+    [
+     2030,
+     9.45,
+     3.5,
+     20.7
+    ],
+    [
+     2040,
+     8.59,
+     3.61,
+     21.1
+    ],
+    [
+     2050,
+     7.37,
+     3.61,
+     21.4
+    ]
+   ],
+   "rows": [
+    {
+     "year": 2025,
+     "level": 342.179,
+     "area": 18735,
+     "volume": 106.91,
+     "inflow": 13.83,
+     "precip": 3.12,
+     "evap": 17.8
+    },
+    {
+     "year": 2026,
+     "level": 342.073,
+     "area": 18572,
+     "volume": 104.93,
+     "inflow": 12.95,
+     "precip": 3.09,
+     "evap": 18.25
+    },
+    {
+     "year": 2027,
+     "level": 341.895,
+     "area": 18300,
+     "volume": 101.65,
+     "inflow": 12.07,
+     "precip": 3.04,
+     "evap": 18.58
+    },
+    {
+     "year": 2028,
+     "level": 341.648,
+     "area": 17922,
+     "volume": 97.17,
+     "inflow": 11.2,
+     "precip": 2.97,
+     "evap": 18.79
+    },
+    {
+     "year": 2029,
+     "level": 341.333,
+     "area": 17442,
+     "volume": 91.61,
+     "inflow": 10.32,
+     "precip": 2.88,
+     "evap": 18.83
+    },
+    {
+     "year": 2030,
+     "level": 340.955,
+     "area": 16648,
+     "volume": 85.16,
+     "inflow": 9.45,
+     "precip": 2.76,
+     "evap": 18.59
+    },
+    {
+     "year": 2031,
+     "level": 340.561,
+     "area": 15800,
+     "volume": 78.76,
+     "inflow": 9.36,
+     "precip": 2.63,
+     "evap": 17.68
+    },
+    {
+     "year": 2032,
+     "level": 340.189,
+     "area": 15000,
+     "volume": 73.04,
+     "inflow": 9.28,
+     "precip": 2.5,
+     "evap": 16.82
+    },
+    {
+     "year": 2033,
+     "level": 339.841,
+     "area": 14249,
+     "volume": 67.95,
+     "inflow": 9.19,
+     "precip": 2.39,
+     "evap": 16.01
+    },
+    {
+     "year": 2034,
+     "level": 339.516,
+     "area": 13550,
+     "volume": 63.43,
+     "inflow": 9.11,
+     "precip": 2.28,
+     "evap": 15.26
+    },
+    {
+     "year": 2035,
+     "level": 339.214,
+     "area": 12953,
+     "volume": 59.43,
+     "inflow": 9.02,
+     "precip": 2.19,
+     "evap": 14.62
+    },
+    {
+     "year": 2036,
+     "level": 338.931,
+     "area": 12518,
+     "volume": 55.83,
+     "inflow": 8.93,
+     "precip": 2.11,
+     "evap": 14.12
+    },
+    {
+     "year": 2037,
+     "level": 338.662,
+     "area": 12107,
+     "volume": 52.52,
+     "inflow": 8.85,
+     "precip": 2.05,
+     "evap": 13.68
+    },
+    {
+     "year": 2038,
+     "level": 338.408,
+     "area": 11717,
+     "volume": 49.5,
+     "inflow": 8.76,
+     "precip": 1.99,
+     "evap": 13.27
+    },
+    {
+     "year": 2039,
+     "level": 338.168,
+     "area": 11349,
+     "volume": 46.73,
+     "inflow": 8.68,
+     "precip": 1.93,
+     "evap": 12.87
+    },
+    {
+     "year": 2040,
+     "level": 337.942,
+     "area": 11002,
+     "volume": 44.2,
+     "inflow": 8.59,
+     "precip": 1.88,
+     "evap": 12.5
+    },
+    {
+     "year": 2041,
+     "level": 337.728,
+     "area": 10672,
+     "volume": 41.88,
+     "inflow": 8.47,
+     "precip": 1.82,
+     "evap": 12.15
+    },
+    {
+     "year": 2042,
+     "level": 337.523,
+     "area": 10358,
+     "volume": 39.72,
+     "inflow": 8.35,
+     "precip": 1.77,
+     "evap": 11.81
+    },
+    {
+     "year": 2043,
+     "level": 337.327,
+     "area": 10058,
+     "volume": 37.72,
+     "inflow": 8.22,
+     "precip": 1.72,
+     "evap": 11.48
+    },
+    {
+     "year": 2044,
+     "level": 337.141,
+     "area": 9756,
+     "volume": 35.88,
+     "inflow": 8.1,
+     "precip": 1.66,
+     "evap": 11.15
+    },
+    {
+     "year": 2045,
+     "level": 336.965,
+     "area": 9440,
+     "volume": 34.19,
+     "inflow": 7.98,
+     "precip": 1.61,
+     "evap": 10.82
+    },
+    {
+     "year": 2046,
+     "level": 336.8,
+     "area": 9143,
+     "volume": 32.66,
+     "inflow": 7.86,
+     "precip": 1.56,
+     "evap": 10.5
+    },
+    {
+     "year": 2047,
+     "level": 336.646,
+     "area": 8866,
+     "volume": 31.27,
+     "inflow": 7.74,
+     "precip": 1.51,
+     "evap": 10.19
+    },
+    {
+     "year": 2048,
+     "level": 336.501,
+     "area": 8605,
+     "volume": 30.0,
+     "inflow": 7.61,
+     "precip": 1.47,
+     "evap": 9.91
+    },
+    {
+     "year": 2049,
+     "level": 336.365,
+     "area": 8361,
+     "volume": 28.85,
+     "inflow": 7.49,
+     "precip": 1.43,
+     "evap": 9.64
+    },
+    {
+     "year": 2050,
+     "level": 336.237,
+     "area": 8130,
+     "volume": 27.79,
+     "inflow": 7.37,
+     "precip": 1.39,
+     "evap": 9.39
+    },
+    {
+     "year": 2051,
+     "level": 336.124,
+     "area": 7927,
+     "volume": 26.89,
+     "inflow": 7.37,
+     "precip": 1.35,
+     "evap": 9.15
+    },
+    {
+     "year": 2052,
+     "level": 336.032,
+     "area": 7761,
+     "volume": 26.16,
+     "inflow": 7.37,
+     "precip": 1.33,
+     "evap": 8.96
+    },
+    {
+     "year": 2053,
+     "level": 335.957,
+     "area": 7627,
+     "volume": 25.59,
+     "inflow": 7.37,
+     "precip": 1.3,
+     "evap": 8.8
+    },
+    {
+     "year": 2054,
+     "level": 335.897,
+     "area": 7518,
+     "volume": 25.13,
+     "inflow": 7.37,
+     "precip": 1.28,
+     "evap": 8.68
+    },
+    {
+     "year": 2055,
+     "level": 335.848,
+     "area": 7431,
+     "volume": 24.77,
+     "inflow": 7.37,
+     "precip": 1.27,
+     "evap": 8.58
+    },
+    {
+     "year": 2056,
+     "level": 335.81,
+     "area": 7362,
+     "volume": 24.49,
+     "inflow": 7.37,
+     "precip": 1.26,
+     "evap": 8.49
+    },
+    {
+     "year": 2057,
+     "level": 335.779,
+     "area": 7308,
+     "volume": 24.26,
+     "inflow": 7.37,
+     "precip": 1.25,
+     "evap": 8.43
+    },
+    {
+     "year": 2058,
+     "level": 335.755,
+     "area": 7264,
+     "volume": 24.09,
+     "inflow": 7.37,
+     "precip": 1.24,
+     "evap": 8.38
+    },
+    {
+     "year": 2059,
+     "level": 335.737,
+     "area": 7230,
+     "volume": 23.95,
+     "inflow": 7.37,
+     "precip": 1.23,
+     "evap": 8.34
+    },
+    {
+     "year": 2060,
+     "level": 335.722,
+     "area": 7204,
+     "volume": 23.84,
+     "inflow": 7.37,
+     "precip": 1.23,
+     "evap": 8.31
+    },
+    {
+     "year": 2061,
+     "level": 335.71,
+     "area": 7183,
+     "volume": 23.76,
+     "inflow": 7.37,
+     "precip": 1.23,
+     "evap": 8.29
+    },
+    {
+     "year": 2062,
+     "level": 335.701,
+     "area": 7166,
+     "volume": 23.7,
+     "inflow": 7.37,
+     "precip": 1.22,
+     "evap": 8.27
+    },
+    {
+     "year": 2063,
+     "level": 335.694,
+     "area": 7153,
+     "volume": 23.64,
+     "inflow": 7.37,
+     "precip": 1.22,
+     "evap": 8.25
+    },
+    {
+     "year": 2064,
+     "level": 335.688,
+     "area": 7143,
+     "volume": 23.6,
+     "inflow": 7.37,
+     "precip": 1.22,
+     "evap": 8.24
+    },
+    {
+     "year": 2065,
+     "level": 335.684,
+     "area": 7136,
+     "volume": 23.57,
+     "inflow": 7.37,
+     "precip": 1.22,
+     "evap": 8.23
+    },
+    {
+     "year": 2066,
+     "level": 335.681,
+     "area": 7129,
+     "volume": 23.55,
+     "inflow": 7.37,
+     "precip": 1.22,
+     "evap": 8.22
+    },
+    {
+     "year": 2067,
+     "level": 335.678,
+     "area": 7125,
+     "volume": 23.53,
+     "inflow": 7.37,
+     "precip": 1.22,
+     "evap": 8.22
+    },
+    {
+     "year": 2068,
+     "level": 335.676,
+     "area": 7121,
+     "volume": 23.52,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.21
+    },
+    {
+     "year": 2069,
+     "level": 335.674,
+     "area": 7118,
+     "volume": 23.5,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.21
+    },
+    {
+     "year": 2070,
+     "level": 335.673,
+     "area": 7116,
+     "volume": 23.5,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.21
+    },
+    {
+     "year": 2071,
+     "level": 335.672,
+     "area": 7114,
+     "volume": 23.49,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.21
+    },
+    {
+     "year": 2072,
+     "level": 335.671,
+     "area": 7113,
+     "volume": 23.48,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2073,
+     "level": 335.671,
+     "area": 7112,
+     "volume": 23.48,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2074,
+     "level": 335.67,
+     "area": 7111,
+     "volume": 23.48,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2075,
+     "level": 335.67,
+     "area": 7110,
+     "volume": 23.47,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2076,
+     "level": 335.67,
+     "area": 7110,
+     "volume": 23.47,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2077,
+     "level": 335.669,
+     "area": 7109,
+     "volume": 23.47,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2078,
+     "level": 335.669,
+     "area": 7109,
+     "volume": 23.47,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2079,
+     "level": 335.669,
+     "area": 7109,
+     "volume": 23.47,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2080,
+     "level": 335.669,
+     "area": 7109,
+     "volume": 23.47,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2081,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.47,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2082,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.47,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2083,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.47,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2084,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2085,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2086,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2087,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2088,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2089,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2090,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2091,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2092,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2093,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2094,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2095,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2096,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2097,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2098,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2099,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    },
+    {
+     "year": 2100,
+     "level": 335.669,
+     "area": 7108,
+     "volume": 23.46,
+     "inflow": 7.37,
+     "precip": 1.21,
+     "evap": 8.2
+    }
+   ],
+   "equilibrium": {
+    "area": 7159,
+    "level": 335.7,
+    "volume": 23.7,
+    "extrapolated": false
+   }
+  }
+ }
+}

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "dataset": "GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL",
+  "year": 2023,
+  "width": 512,
+  "height": 376,
+  "dimensions": 64,
+  "encoding": "aef-int8",
+  "noData": -128,
+  "bounds": {
+    "minLon": 76.943,
+    "minLat": 43.075,
+    "maxLon": 77.13,
+    "maxLat": 43.175
+  },
+  "crs": "EPSG:4326",
+  "sourceResolutionMeters": 10,
+  "gridSpacingMeters": {
+    "x": 29.67473363886527,
+    "y": 29.606382978721722
+  },
+  "aggregationMeters": 10,
+  "sourceOverviewLevel": null,
+  "resampling": "nearest",
+  "valuesFile": "values.bin",
+  "validPixels": 192512,
+  "sources": [
+    "https://storage.googleapis.com/alphaearth_foundations/satellite_embedding/v1/annual/2023/43N/x7q1nwvtz9n5sw2rr-0000000000-0000008192.tiff",
+    "https://storage.googleapis.com/alphaearth_foundations/satellite_embedding/v1/annual/2023/43N/x2rv5jwtc7l56bd4l-0000000000-0000000000.tiff"
+  ],
+  "license": "CC-BY-4.0",
+  "attribution": "The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind."
+}

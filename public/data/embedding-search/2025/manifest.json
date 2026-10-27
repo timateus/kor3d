@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "year": 2025,
+  "dataset": "GOOGLE/SATELLITE_EMBEDDING/V1/ANNUAL",
+  "encoding": "aef-int8",
+  "dimensions": 64,
+  "blockSize": 5,
+  "count": 34980,
+  "valuesFile": "values.bin",
+  "locations": [
+    {
+      "slug": "gorny-gigant",
+      "label": "Gorny Gigant",
+      "bounds": {
+        "minLon": 76.9323,
+        "minLat": 43.1993,
+        "maxLon": 76.9737,
+        "maxLat": 43.2302
+      },
+      "sourceWidth": 336,
+      "sourceHeight": 344,
+      "width": 68,
+      "height": 69,
+      "offset": 0,
+      "count": 4692
+    },
+    {
+      "slug": "almaty",
+      "label": "Almaty",
+      "bounds": {
+        "minLon": 76.925,
+        "minLat": 43.22,
+        "maxLon": 76.975,
+        "maxLat": 43.256
+      },
+      "sourceWidth": 406,
+      "sourceHeight": 401,
+      "width": 82,
+      "height": 81,
+      "offset": 4692,
+      "count": 6642
+    },
+    {
+      "slug": "suaq",
+      "label": "Suaq",
+      "bounds": {
+        "minLon": 79.03803,
+        "minLat": 43.33403,
+        "maxLon": 79.09781,
+        "maxLat": 43.36792
+      },
+      "sourceWidth": 484,
+      "sourceHeight": 378,
+      "width": 97,
+      "height": 76,
+      "offset": 11334,
+      "count": 7372
+    },
+    {
+      "slug": "balqash",
+      "label": "Balqash",
+      "bounds": {
+        "minLon": 74.96,
+        "minLat": 46.82,
+        "maxLon": 75.03,
+        "maxLat": 46.87
+      },
+      "sourceWidth": 490,
+      "sourceHeight": 512,
+      "width": 98,
+      "height": 103,
+      "offset": 18706,
+      "count": 10094
+    },
+    {
+      "slug": "balqash-lake",
+      "label": "Lake Balqash",
+      "bounds": {
+        "minLon": 72.8,
+        "minLat": 44.8,
+        "maxLon": 79.2,
+        "maxLat": 47.4
+      },
+      "sourceWidth": 512,
+      "sourceHeight": 300,
+      "width": 103,
+      "height": 60,
+      "offset": 28800,
+      "count": 6180
+    }
+  ],
+  "attribution": "The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind.",
+  "license": "CC-BY-4.0"
+}

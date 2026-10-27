@@ -1,0 +1,17 @@
+{
+ "width": 1466,
+ "height": 457,
+ "bounds": {
+  "minLon": 73.392,
+  "maxLon": 79.256,
+  "minLat": 45.012,
+  "maxLat": 46.839999999999996
+ },
+ "level0": 330,
+ "step": 0.06,
+ "refLevel": 342.18,
+ "osmAreaKm2": 16730,
+ "surveyAreaAtRefKm2": 18736,
+ "source": "OSM relation 19025268 (ODbL) + level–area curve from Tursunov et al. (2011–2013 survey)",
+ "method": "Pseudo-bathymetry: depth assumed to increase with distance from shore, ranked so the flooded share of the OSM outline matches A(h)/A(ref) from the survey curve."
+}

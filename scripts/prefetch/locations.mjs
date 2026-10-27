@@ -22,6 +22,12 @@ export const LOCATIONS = [
     waterBounds: { minLat: 42.96, maxLat: 43.52, minLon: 76.62, maxLon: 77.28 },
   },
   {
+    slug: 'kok-zhailau',
+    bounds: { minLat: 43.075, maxLat: 43.175, minLon: 76.943, maxLon: 77.130 },
+    ski: true, // ski.json (Shymbulak lifts and pistes) — see overpass.mjs fetchSki
+    waterBounds: { minLat: 42.96, maxLat: 43.52, minLon: 76.62, maxLon: 77.28 },
+  },
+  {
     slug: 'tuyuksu-glacier',
     bounds: { minLat: 43.0213, maxLat: 43.0753, minLon: 77.0436, maxLon: 77.1176 },
     waterBounds: { minLat: 42.8681, maxLat: 43.2285, minLon: 76.8342, maxLon: 77.3270 },
@@ -79,6 +85,13 @@ export const LOCATIONS = [
     waterBounds: { minLat: 35.50, maxLat: 48.00, minLon: 44.80, maxLon: 56.20 },
     // Sea-scale bbox spans 5 countries — unrestricted water/buildings queries
     // return 100+ MB (unfetchable/unrenderable). See fetchWater's `coarse` param.
+    coarse: true,
+  },
+  {
+    slug: 'malaysia',
+    bounds: { minLat: 1.15, maxLat: 6.80, minLon: 99.55, maxLon: 104.65 },
+    waterBounds: { minLat: 0.95, maxLat: 7.00, minLon: 99.30, maxLon: 104.90 },
+    // ~570×630 km of dense rainforest/plantation drainage + KL/Singapore: unrestricted water & buildings are unfetchable.
     coarse: true,
   },
 ];

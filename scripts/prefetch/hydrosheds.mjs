@@ -32,6 +32,9 @@
 //                 rendering (this renderer's pattern, matching OsmLinesLayer)
 //                 — filtering out small headwater streams keeps it fast and
 //                 the file size reasonable. Lower it for more tributary detail.
+//   --all-in-bounds  Instead of the single basin containing the center, take
+//                 every basin polygon whose centroid lies inside the location's
+//                 bounds — for coasts with many independent sea-draining rivers.
 //
 // Requires: `npm i -D shapefile @turf/turf` (already devDependencies here).
 // Data: HydroSHEDS HydroRIVERS & HydroBASINS v1c (Lehner & Grill, 2013),
@@ -139,7 +142,7 @@ function roundPolyGeom(geom) {
   return geom;
 }
 
-async function processLocation(loc, level, region, minStra, basinsCache) {
+async function processLocation(loc, level, region, minStra, basinsCache, allInBounds) {
   console.log(`\n[${loc.slug}] basin (HydroBASINS lev${level}, region ${region}, min Strahler order ${minStra})…`);
 
   const key = `${region}_${level}`;
@@ -150,19 +153,35 @@ async function processLocation(loc, level, region, minStra, basinsCache) {
   const basins = basinsCache[key];
 
   const b = loc.bounds;
-  const center = turf.point([(b.minLon + b.maxLon) / 2, (b.minLat + b.maxLat) / 2]);
-  const containing = basins.find((f) => {
-    try { return turf.booleanPointInPolygon(center, f); } catch { return false; }
-  });
-  if (!containing) {
-    console.warn(`  no lev${level}/${region} basin polygon contains ${loc.slug}'s center — wrong --region? skipping.`);
-    return;
+  let basinPolys;
+  let mainBas;
+  if (allInBounds) {
+    // Coastlines with many short rivers each draining straight to the sea
+    // (e.g. Peninsular Malaysia) have no single "the basin" — take every
+    // polygon whose centroid falls inside the location's bounds instead.
+    basinPolys = basins.filter((f) => {
+      const [x, y] = turf.centroid(f).geometry.coordinates;
+      return x >= b.minLon && x <= b.maxLon && y >= b.minLat && y <= b.maxLat;
+    });
+    mainBas = null;
+    if (basinPolys.length === 0) {
+      console.warn(`  no lev${level}/${region} basin polygons inside ${loc.slug}'s bounds — wrong --region? skipping.`);
+      return;
+    }
+  } else {
+    const center = turf.point([(b.minLon + b.maxLon) / 2, (b.minLat + b.maxLat) / 2]);
+    const containing = basins.find((f) => {
+      try { return turf.booleanPointInPolygon(center, f); } catch { return false; }
+    });
+    if (!containing) {
+      console.warn(`  no lev${level}/${region} basin polygon contains ${loc.slug}'s center — wrong --region? skipping.`);
+      return;
+    }
+    mainBas = containing.properties.MAIN_BAS;
+    basinPolys = basins.filter((f) => f.properties.MAIN_BAS === mainBas);
   }
-
-  const mainBas = containing.properties.MAIN_BAS;
-  const basinPolys = basins.filter((f) => f.properties.MAIN_BAS === mainBas);
   const totalArea = basinPolys.reduce((s, f) => s + (f.properties.SUB_AREA || 0), 0);
-  console.log(`  basin: MAIN_BAS=${mainBas}, ${basinPolys.length} lev${level} polygons, ~${totalArea.toFixed(0)} km²`);
+  console.log(`  basin: MAIN_BAS=${mainBas ?? 'all-in-bounds'}, ${basinPolys.length} lev${level} polygons, ~${totalArea.toFixed(0)} km²`);
 
   const basinFC = turf.featureCollection(basinPolys);
   const basinBBox = turf.bbox(basinFC);
@@ -245,11 +264,13 @@ async function main() {
   let level = 5;
   let region = 'as';
   let minStra = 3;
+  let allInBounds = false;
   const slugs = [];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--level') { level = Number(args[++i]); }
     else if (args[i] === '--region') { region = args[++i]; }
     else if (args[i] === '--min-stra') { minStra = Number(args[++i]); }
+    else if (args[i] === '--all-in-bounds') { allInBounds = true; }
     else slugs.push(args[i]);
   }
   const targets = slugs.length ? LOCATIONS.filter((l) => slugs.includes(l.slug)) : LOCATIONS;
@@ -260,7 +281,7 @@ async function main() {
 
   const basinsCache = {};
   for (const loc of targets) {
-    await processLocation(loc, level, region, minStra, basinsCache);
+    await processLocation(loc, level, region, minStra, basinsCache, allInBounds);
   }
   console.log('\nDone.');
 }
